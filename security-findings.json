@@ -1,25 +1,69 @@
 {
-  "scan_id": "scan-2026-11-13-sheetcore-initial",
-  "scan_date": "2026-11-13T15:51:59.809Z",
+  "scan_id": "scan-2026-11-13-sheetcore-views-github",
   "scan_type": "working",
-  "commit_range": "d806701..working-tree",
+  "commit_range": "0d441208f61c2b2690e3326a141d4d0e0dc1acb6..working-tree",
   "pr_number": null,
-  "threat_model_version": "1.0.0",
-  "scope": "Source review of 27 security-relevant modules/configurations covering import, evaluation, persistence, rendering, local fixture scripts and CI. Not a penetration test or exhaustive dependency audit.",
+  "threat_model_version": "1.2.0",
+  "scope": "Focused review of 17 changed runtime TS/TSX/CSS modules, their diffs and relevant persistence/reference context. Not a penetration test, exhaustive dependency audit or full upstream compatibility certification.",
   "findings": [],
   "notes": [
-    "Unsupported initializer options, dynamic destinations, implicit/concurrent sequences and calculated aggregation now fail atomically; regression tests pass.",
-    "Secret-pattern search matched only an intentional invalid-URL test credential, not a configured secret.",
-    "No imported HTML/script execution sink or remote image fetch was found; HTTPS downloads are explicit and omit credentials/referrers.",
-    "Existing build-chain dependency advisories and accepted local-storage/host risks remain documented separately."
+    "A reserved source view-ID validation bug was reproduced before fixing the validation dictionary to use a null prototype. Regression tests now require retained messages and blocked Save for __proto__, constructor and toString IDs.",
+    "No remaining confirmed security findings were identified in the reviewed runtime changes. No secret-pattern matches were found in the 17 changed runtime modules.",
+    "GitHub discovery constructs public API/Raw URLs, validates commit/tree metadata and encoded paths, excludes symlinks/submodules, rejects partial trees, and applies byte/node/depth/count/time bounds. Requests omit credentials/referrers and send no local character, photo or backup records.",
+    "Source-form commands validate base fields and exact resource pins in transactions. New views use React text and whitelisted colors; imported events and rendering-time rolls remain unsupported.",
+    "Runtime dependency audit found zero known vulnerabilities. Existing build-tool advisories, local-storage risks, manual fallback conflicts and partial source semantics remain documented separately."
   ],
   "summary": {
     "total_findings": 0,
-    "by_severity": { "CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0 },
-    "by_stride": {
-      "Spoofing": 0, "Tampering": 0, "Repudiation": 0,
-      "InfoDisclosure": 0, "DoS": 0, "ElevationOfPrivilege": 0
+    "by_severity": {
+      "CRITICAL": 0,
+      "HIGH": 0,
+      "MEDIUM": 0,
+      "LOW": 0
     },
-    "files_analyzed": 27
+    "by_stride": {
+      "Spoofing": 0,
+      "Tampering": 0,
+      "Repudiation": 0,
+      "InfoDisclosure": 0,
+      "DoS": 0,
+      "ElevationOfPrivilege": 0
+    },
+    "files_analyzed": 17
+  },
+  "scan_date": "2026-11-13T17:07:36.482Z",
+  "previous_scan": {
+    "scan_id": "scan-2026-11-13-sheetcore-initial",
+    "scan_date": "2026-11-13T15:51:59.809Z",
+    "scan_type": "working",
+    "commit_range": "d806701..working-tree",
+    "pr_number": null,
+    "threat_model_version": "1.0.0",
+    "scope": "Source review of 27 security-relevant modules/configurations covering import, evaluation, persistence, rendering, local fixture scripts and CI. Not a penetration test or exhaustive dependency audit.",
+    "findings": [],
+    "notes": [
+      "Unsupported initializer options, dynamic destinations, implicit/concurrent sequences and calculated aggregation now fail atomically; regression tests pass.",
+      "Secret-pattern search matched only an intentional invalid-URL test credential, not a configured secret.",
+      "No imported HTML/script execution sink or remote image fetch was found; HTTPS downloads are explicit and omit credentials/referrers.",
+      "Existing build-chain dependency advisories and accepted local-storage/host risks remain documented separately."
+    ],
+    "summary": {
+      "total_findings": 0,
+      "by_severity": {
+        "CRITICAL": 0,
+        "HIGH": 0,
+        "MEDIUM": 0,
+        "LOW": 0
+      },
+      "by_stride": {
+        "Spoofing": 0,
+        "Tampering": 0,
+        "Repudiation": 0,
+        "InfoDisclosure": 0,
+        "DoS": 0,
+        "ElevationOfPrivilege": 0
+      },
+      "files_analyzed": 27
+    }
   }
 }

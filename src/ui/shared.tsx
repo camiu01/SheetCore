@@ -1,5 +1,6 @@
 /** @file Accessible shared UI and bounded browser file/download utilities. */
 import { useEffect, useRef, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { X, ArrowUpRight, AlertTriangle } from 'lucide-react';
 import type { StoredSystem } from '../domain/model';
 import { decodeUtf8 } from '../importing/system';
@@ -7,13 +8,13 @@ import { it } from './it';
 
 export type Run = (work: () => Promise<unknown>, success?: string) => Promise<void>;
 /** Native modal dialog supplies focus trapping, Escape handling, and focus return. */
-export function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
+export function Modal({ title, children, onClose, bottomSheet = false }: { title: string; children: ReactNode; onClose: () => void; bottomSheet?: boolean }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => { const dialog = ref.current; dialog?.showModal(); return () => dialog?.close(); }, []);
-  return <dialog ref={ref} onCancel={onClose} aria-labelledby="dialog-title">
-    <div className="modal-heading"><h2 id="dialog-title">{title}</h2><button className="icon-button" aria-label={it.close} onClick={onClose}><X size={20} /></button></div>
+  return createPortal(<dialog ref={ref} className={bottomSheet ? 'source-bottom-sheet' : undefined} onCancel={event => { event.preventDefault(); onClose(); }} aria-label={title}>
+    <div className="modal-heading"><h2>{title}</h2><button className="icon-button" aria-label={it.close} onClick={onClose}><X size={20} /></button></div>
     {children}
-  </dialog>;
+  </dialog>, document.body);
 }
 export function PageHeading({ eyebrow, title, description, action }: { eyebrow: string; title: string; description: string; action?: ReactNode }) {
   return <header className="page-heading"><div><p className="eyebrow">{eyebrow}</p><h1>{title}</h1><p className="muted">{description}</p></div>{action}</header>;

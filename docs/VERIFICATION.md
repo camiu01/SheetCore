@@ -3,6 +3,111 @@
 Run locally on 2026-11-13 on Windows, Node.js 24.13.1, npm 9.2.0.
 This is a development verification record, not a compatibility certification.
 
+## Current GitHub retrieval increment
+
+- `npm run check`: passed strict TypeScript and 137 tests in eleven files,
+  no skips. Eleven GitHub groups verify URL normalization, default/explicit
+  references, commit pinning, selection, byte/tree/candidate bounds at their
+  declared limits, unsafe/incomplete metadata, public-API failures, exact
+  originals and immutable character pins through backup restoration.
+- `npm run build`: passed; main JS 601.03 kB, 181.99 kB gzip; CSS 34.41 kB;
+  11 precache entries, 655.69 KiB. Existing Zod annotation and >500 kB chunk
+  warnings remain. No dependencies or database schema changed.
+- `npm audit --omit=dev`: zero known runtime dependency vulnerabilities.
+- Final production Playwright on port 4183: **36/36 passed at `/SheetCore/`
+  and 36/36 at `/`**, no skips. The two suites and the live check below took
+  168.4 seconds for all three sequential commands.
+  Controlled GitHub/Raw responses exercise the real clone-URL UI, reference
+  encoding, file selection, invalid-content rejection, cancellation before
+  installation, confirmation, exact export, offline reopening, rate limits,
+  missing repositories and authoring-only trees. Existing acceptance passed.
+- Separate intentional live public GitHub check: **2/2 passed**, desktop/mobile,
+  9.8 seconds reported by Playwright, no intercepts. The real API resolved
+  derpsy commit `00f55b2c3023c59f5857297dc933a7505c9b6aa4`, listed the tree,
+  downloaded `5e/system.rpg`, and displayed version `0.6.0` with 317 stats.
+  This establishes the observed public API/Raw availability and browser CORS,
+  not continued availability or full RPG runtime compatibility.
+- Pre-commit review reproduced a reserved view-ID validation failure:
+  `__proto__` lost its error in a normal object dictionary. A null-prototype
+  dictionary now retains validation for that ID, `constructor` and `toString`.
+  The new regression verifies blocked Save. All final checks above ran after
+  this correction. The focused security review records no remaining confirmed
+  findings in the reviewed changes; it is not a penetration test.
+- The existing preview on port 4173 was retained. Hosted deployment was not
+  verified. Private repositories, non-GitHub Git hosts, arbitrary cloning,
+  split-source compilation and resource archives remain unsupported.
+
+See [GitHub contract and usage](GITHUB_IMPORT.md).
+
+## Previous scoped-view increment
+
+- `npm run check`: passed strict TypeScript and 125 tests in ten files, no skips.
+  Eleven scoped-view regressions cover immediate draft validation, failed saves,
+  nested Save/reopen/Cancel with combat overrides, exact-pin resource lookup,
+  concurrent appends, invalid multi-field rollback, foreign additions, linked-PC
+  combat writes and immutable backup originals. Both pinned original systems'
+  six point-buy inputs and source cost calculations are exercised.
+- `npm run build`: passed after the final application change; main JS 594.43 kB,
+  179.75 kB gzip; CSS 34.37 kB; 11 precache entries, 649.21 KiB.
+  Existing Zod annotation and >500 kB chunk warnings remain.
+- Final production Playwright on isolated port 4183: **34/34 passed at
+  `/SheetCore/` and 34/34 at `/`**, desktop/mobile, no skips; 147.8 seconds for
+  the two sequential commands. The existing user preview on 4173 was retained.
+  Tests use original Archer/derpsy popups, condition Save/Cancel, the six source
+  point-buy inputs, validated note creation, local resource ordering/unlinking,
+  offline reopening, exact source exports and backup restoration.
+- `npm audit --omit=dev`: zero known runtime dependency vulnerabilities.
+  No dependencies or database schema changed.
+- Earlier intermediate browser assertions/builds are not the final evidence.
+  Nested popup reopening was corrected to prefer staged preview values over
+  original combat overrides; final unit/build/browser checks ran afterwards.
+- Full diagnostics for the attached derpsy `5e` `0.6.0` original were inspected,
+  not just the first 100 displayed entries: 1,875 warnings and no static errors.
+  This is not full runtime compatibility. Empty `classes` reproduces a null
+  saving-throw proficiency and a strict boolean-condition error; null `race`
+  reproduces required `race.current_level_traits` lookup failure. Neither was
+  disguised with invented defaults.
+
+General events, official creation/progression, nested resource contexts and
+additional views/formulas remain unsupported. The manual source-input groups
+are explicitly not an official character-creation workflow. See
+[view contracts and limits](VIEWS.md).
+
+Live public-provider checks and hosted deployment were not rerun for this
+increment. URL tests used controlled responses. No commit, push or remote
+settings change was performed.
+
+## Previous collection-only increment
+
+- `npm run check`: passed TypeScript and 114 tests in nine files, no skips.
+  Seven new grouped regressions include both pinned original source variants,
+  populated armor selection by actual local instance ID, strict input failures,
+  lexical bindings, bounded flattening and required missing-race errors.
+- `npm run build`: passed; main JS 562.21 kB, 171.07 kB gzip; 11 precache
+  entries, 616.54 KiB. Existing Zod annotation and >500 kB chunk warnings remain.
+- `npm audit --omit=dev`: zero known runtime dependency vulnerabilities.
+- Production Playwright with port 4183 and `/SheetCore/`: 32/32 passed,
+  no skips, 67.5 seconds including the command. Desktop and mobile exercise
+  all six new handlers through real imported views and a saved text input;
+  expected `1,3|2|no|si` becomes `1,3|2|si|si`, and survives offline reopening.
+  Existing source export, backup/restore and combat acceptance also passed.
+- Initial new integration assertions incorrectly assumed that manual defaults
+  with a null race produced empty derived collections. They failed on required
+  original paths. The tests now explicitly require those failures; the evaluator
+  was not weakened or supplied invented defaults.
+- One intermediate TypeScript test assertion failed; replaced it with an actual
+  array guard. All final checks above ran after the final application change.
+
+At this earlier checkpoint, the requested views and `$view` edit sessions were
+not yet implemented. The current scoped-view results above supersede that
+limitation. Root-path browser and live provider checks were not rerun at this
+earlier checkpoint. No dependencies, database schema or original source records
+changed.
+
+## Previous combat and deployment baseline
+
+The following results predate the collection increment above.
+
 | Check | Executed result |
 | --- | --- |
 | `node scripts/inspect-archer.mjs` | Passed; pinned gzip-JSON system extracted locally |

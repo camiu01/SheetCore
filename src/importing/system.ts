@@ -13,15 +13,33 @@ import {
 export const MAX_SYSTEM_BYTES = 8 * 1024 * 1024;
 /** Renderer field allowlist; unhandled fields remain in the original document. */
 export const viewFields: Record<string, string[]> = {
-  text: ['text', 'edit_stat', 'style', 'label', 'hint', 'max_length', 'bold'],
+  text: ['text', 'edit_stat', 'style', 'label', 'hint', 'max_length', 'bold', 'max_lines', 'signed', 'color', 'resource_id', 'resource_instance_ids_stat', 'resource_display_stat'],
   stat: ['stat', 'edit_stat', 'change_amount', 'min_value_allowed', 'max_value_allowed', 'style', 'always_show_sign', 'override_label'],
-  section: ['header', 'content', 'show_divider', 'collapsible', 'start_collapsed', 'content_item_min_width', 'alignment'],
-  list: ['subviews', 'padding', 'alignment'],
+  section: ['header', 'content', 'show_divider', 'collapsible', 'start_collapsed', 'always_show_collapse_icon', 'content_item_min_width', 'alignment'],
+  list: ['subviews', 'padding', 'padding_top', 'padding_right', 'padding_bottom', 'padding_left', 'alignment'],
   composite: ['subviews', 'alignment', 'row_only'],
-  divider: [], spacer: [], checkbox: ['stat', 'label', 'enabled'],
-  avatar: ['photo_stat', 'name_stat', 'interactable', 'preview_enabled', 'size']
+  divider: [], spacer: [], checkbox: ['stat', 'label', 'enabled', 'label_alignment', 'style'],
+  avatar: ['photo_stat', 'name_stat', 'interactable', 'preview_enabled', 'size'],
+  avatarSection: ['center_content', 'bottom_left_stack', 'bottom_right_stack', 'bottom_left_button_title', 'bottom_right_button_title'],
+  icon: ['name', 'size', 'color'],
+  selectResources: ['stat', 'resource_id', 'view_type', 'preserve_ids', 'should_append', 'should_save_on_selection', 'create_in_place', 'inline_creation_mode', 'creation_pop_up_type'],
+  resourceSection: ['resource_stat', 'resource_set_stat', 'resource_id', 'header_view', 'read_only', 'tap_displays_resource', 'max_items_in_preview', 'reorganizable', 'content_item_min_width', 'alignment'],
+  popUpButton: ['text', 'icon', 'pop_up_title', 'pop_up_view', 'display_cancel_button', 'cancel_text', 'display_save_button', 'save_text', 'should_persist_on_save', 'pop_up_type'],
+  chip: ['text', 'background_color', 'border_color', 'style', 'resource_id', 'resource_instance_ids_stat', 'resource_display_stat'],
+  listItem: ['title', 'subtitle', 'first_line_extra', 'second_line_extra', 'title_color', 'subtitle_color', 'first_line_extra_color', 'second_line_extra_color']
 };
-const commonViewFields = ['type', 'id', 'is_visible', 'margin_left', 'margin_right', 'margin_top', 'margin_bottom'];
+const commonViewFields = ['type', 'id', 'is_visible', 'validation_message', 'margin_left', 'margin_right', 'margin_top', 'margin_bottom'];
+/** Only implemented enum variants may pass the renderer's behavioral boundary. */
+export function unsupportedViewOptions(v: Record<string, unknown>): string[] {
+  const variants: Record<string, Record<string, string[]>> = {
+    icon: { size: ['small', 'medium', 'large'] },
+    checkbox: { style: ['checkbox'], label_alignment: ['left', 'right'] },
+    chip: { style: ['compact', 'fullSize'] },
+    popUpButton: { pop_up_type: ['bottomSheet', 'alert'] },
+    selectResources: { view_type: ['list', 'icon'], inline_creation_mode: ['disabled', 'optional', 'only'], creation_pop_up_type: ['bottomSheet', 'window'] }
+  };
+  return Object.entries(variants[String(v.type)] ?? {}).filter(([key, values]) => v[key] != null && !values.includes(String(v[key]))).map(([key]) => key);
+}
 const supportedValues = new Set(['string', 'integer', 'decimal', 'bool', 'array', 'resource', 'photo']);
 /** Decode exact UTF-8, retaining a BOM; never silently replace malformed bytes. */
 export function decodeUtf8(bytes: BufferSource): string {
@@ -90,7 +108,7 @@ export function diagnose(system: SystemDefinition): Diagnostic[] {
         if (typeof node.stat !== 'string') report(`${path}.stat`, 'Riferimento richiesto', 'error');
         else try {
           const first = statPath(node.stat)[0];
-          const contexts = ['created_at', '$resource', '$combatants', '$combat', '$combat_difficulty', '$combatant', '$combatant_type', '$template_resource_id', '$instance_resource_id'];
+          const contexts = ['created_at', '$view', '$resource', '$combatants', '$combat', '$combat_difficulty', '$combatant', '$combatant_type', '$template_resource_id', '$instance_resource_id'];
           if (!stats.some(s => s.id === first.id) && !bindings.includes(first.id) && !contexts.includes(first.id) && !first.optional && type !== 'defined')
             report(`${path}.stat`, `Riferimento mancante o contesto non disponibile: ${node.stat}`);
         } catch (error) { report(`${path}.stat`, error instanceof Error ? error.message : String(error), 'error'); }
@@ -102,6 +120,8 @@ export function diagnose(system: SystemDefinition): Diagnostic[] {
         report(`${path}.treat_as_set`, 'Valore booleano richiesto', 'error');
       if (type === 'divide' && !['down', 'up', 'none'].includes(String(node.rounding_method)))
         report(`${path}.rounding_method`, 'Supportati solo down, up, none espliciti; closest non verificato.');
+      if (type === 'sortBy' && !['asc', 'desc'].includes(String(node.order)))
+        report(`${path}.order`, 'Ordine sortBy richiesto: asc o desc.', 'error');
     }
     if (type === 'list' || type === 'flatAppend') {
       if (!Array.isArray(node.components)) report(`${path}.components`, 'Lista richiesta', 'error');
@@ -116,14 +136,17 @@ export function diagnose(system: SystemDefinition): Diagnostic[] {
       });
     } else if (Object.hasOwn(node, 'components') && !Array.isArray(node.components)) {
       checkFormula(node.components, `${path}.components`, stats, bindings, allowRoll);
-    } else if (['add', 'subtract', 'multiply', 'divide', 'and', 'or', 'isEmpty', 'concat', 'trim', 'date', 'max', 'min', 'map', 'filter', 'defaultIfNull', 'joinToString', 'equals', 'notEquals', 'length', 'not', 'greaterThan', 'greaterThanEquals', 'lessThan', 'lessThanEquals'].includes(type)) {
+    } else if (['add', 'subtract', 'multiply', 'divide', 'and', 'or', 'isEmpty', 'isNull', 'toLowerCase', 'sortBy', 'findFirst', 'flatMap', 'concat', 'trim', 'date', 'max', 'min', 'map', 'filter', 'defaultIfNull', 'joinToString', 'equals', 'notEquals', 'length', 'not', 'greaterThan', 'greaterThanEquals', 'lessThan', 'lessThanEquals'].includes(type)) {
       report(`${path}.components`, 'Formula components richiesta (non una lista JSON diretta)', 'error');
     }
-    for (const field of ['mapper', 'filter', 'default_components', 'meta_stat', 'formula']) {
+    for (const field of ['mapper', 'filter', 'sort_by_selector', 'haystack', 'needle', 'default_components', 'meta_stat', 'formula']) {
       if (!formulaFields[type]?.includes(field)) continue;
+      if (type === 'findFirst' && field === 'filter' && node.filter == null) continue;
       let inner = bindings;
-      if (field === 'mapper' || field === 'filter') {
-        const key = node[field === 'mapper' ? 'map_value_key' : 'filter_value_key'] ?? (field === 'mapper' ? '$mapValue' : '$filterValue');
+      if (field === 'mapper' || field === 'filter' || field === 'sort_by_selector') {
+        const keyField = field === 'mapper' ? 'map_value_key' : field === 'sort_by_selector' ? 'sort_by_value_key' : type === 'findFirst' ? 'find_first_value_key' : 'filter_value_key';
+        const fallback = field === 'mapper' ? '$mapValue' : field === 'sort_by_selector' ? '$sortByValue' : type === 'findFirst' ? '$findFirstValue' : '$filterValue';
+        const key = node[keyField] ?? fallback;
         if (typeof key !== 'string' || !/^\$?[\w-]+$/.test(key)) report(path, 'Chiave contestuale non valida', 'error');
         else inner = [...bindings, key];
       }
@@ -137,16 +160,20 @@ export function diagnose(system: SystemDefinition): Diagnostic[] {
     const allowed = viewFields[v.type];
     if (!allowed) report(`${path}.type`, `Componente non supportato: ${v.type}`);
     else fields(v, [...commonViewFields, ...allowed], path);
-    for (const field of ['text', 'label', 'hint', 'is_visible', 'enabled', 'override_label'])
-      if (v[field] != null) checkFormula(v[field], `${path}.${field}`, stats);
+    for (const key of unsupportedViewOptions(v)) report(`${path}.${key}`, `Opzione non supportata: ${String(v[key])}`);
+    if (v.type === 'popUpButton' && v.icon != null && object(v.icon).type !== 'icon')
+      report(`${path}.icon`, 'popUpButton richiede una vista icon.');
+    for (const field of ['text', 'label', 'hint', 'is_visible', 'validation_message', 'enabled', 'override_label', 'pop_up_title', 'save_text', 'cancel_text', 'bottom_left_button_title', 'bottom_right_button_title', 'title', 'subtitle', 'first_line_extra', 'second_line_extra', 'title_color', 'subtitle_color', 'first_line_extra_color', 'second_line_extra_color'])
+      if (v[field] != null) checkFormula(v[field], `${path}.${field}`, stats, ['$view']);
     for (const field of ['stat', 'edit_stat', 'photo_stat', 'name_stat']) if (v[field] != null) {
       if (typeof v[field] !== 'string') report(`${path}.${field}`, 'ID statistica richiesto', 'error');
       else if (!stats.some(s => s.id === v[field])) report(`${path}.${field}`, `Riferimento non risolto: ${v[field]}`);
     }
-    for (const field of ['subviews', 'header', 'content']) {
+    for (const field of ['subviews', 'header', 'content', 'center_content', 'bottom_left_stack', 'bottom_right_stack']) {
       if (v[field] != null && !Array.isArray(v[field])) report(`${path}.${field}`, 'Lista di viste richiesta', 'error');
       if (Array.isArray(v[field])) v[field].forEach((c, i) => checkView(c, `${path}.${field}[${i}]`, stats));
     }
+    for (const field of ['pop_up_view', 'icon', 'header_view']) if (v[field] != null) checkView(v[field], `${path}.${field}`, stats);
     if (['list', 'composite'].includes(v.type) && !Array.isArray(v.subviews)) report(`${path}.subviews`, 'Lista richiesta', 'error');
     if (v.type === 'section' && (!Array.isArray(v.header) || !Array.isArray(v.content))) report(path, 'header e content richiesti', 'error');
   }
@@ -204,7 +231,13 @@ export function diagnose(system: SystemDefinition): Diagnostic[] {
   unique(system.dice ?? [], '$.dice');
   system.character_sheet_sections.forEach((s, i) => checkView(s.view, `$.character_sheet_sections[${i}].view`, system.character_stats));
   checkView(system.character_search_item_view, '$.character_search_item_view', system.character_stats);
-  if (system.character_creation_flow.length) report('$.character_creation_flow', 'Flusso ufficiale non eseguito. Disponibile soltanto creazione manuale.');
+  if (system.character_creation_flow.length) {
+    report('$.character_creation_flow', 'Flusso ufficiale ed eventi non eseguiti. Disponibili gruppi di campi sorgente in modifica manuale.');
+    system.character_creation_flow.forEach((page, i) => {
+      if (page && typeof page === 'object' && object(page).view)
+        checkView(object(page).view, `$.character_creation_flow[${i}].view`, system.character_stats);
+    });
+  }
   if (system.mechanics.length) report('$.mechanics', `${system.mechanics.length} meccaniche non eseguite: il sistema non è pienamente utilizzabile.`);
   if (Object.keys(system.progression_systems).length) report('$.progression_systems', 'Progressione automatica non supportata.');
   if (system.enumerated_types.length) report('$.enumerated_types', 'Enumerazioni conservate, selettori e formule enumerated non supportati.');

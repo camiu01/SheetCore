@@ -2,13 +2,16 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ArrowLeft, ArrowUpRight, BookOpen, Check, Plus, Search, Trash2, UserRound } from 'lucide-react';
-import type { Character, StoredSystem } from '../domain/model';
+import { object, type Character, type StoredSystem, type View } from '../domain/model';
 import { db, createCharacter, detachResource, setCharacterValue } from '../persistence/db';
 import { RenderView } from './renderer';
 import { FieldInput } from './FieldInput';
 import { CompatibilityBadge, Empty, Modal, PageHeading, SystemSelect, Warning, type Run } from './shared';
 import { it } from './it';
 import { useUi } from './store';
+import { commitCharacterView } from '../persistence/views';
+import { manualFieldGroup, sessionViews } from '../engine/view-session';
+import { SourceForm } from './SourceForm';
 
 /** List persisted characters; creation never claims to execute the official flow. */
 export function Characters({ systems, characters, run }: { systems: StoredSystem[]; characters: Character[]; run: Run }) {
@@ -58,8 +61,19 @@ export function Characters({ systems, characters, run }: { systems: StoredSystem
 export function CharacterSheet({ character, system, run }: { character: Character; system: StoredSystem; run: Run }) {
   const { navigate } = useUi();
   const [deleting, setDeleting] = useState(false);
+  const [sourceGroup, setSourceGroup] = useState<View | null>(null);
+  const [formBusy, setFormBusy] = useState(false);
   const resources = useLiveQuery(() => db.resources.where('systemKey').equals(system.key).toArray(), [system.key]) ?? [];
   const change = (id: string, value: unknown) => { void run(() => setCharacterValue(character.id, id, value)); };
+  const context = {
+    stats: system.definition.character_stats, values: character.values, onChange: change,
+    systemKey: system.key, createdAt: character.createdAt, resources, resourceDefinitions: system.definition.resources,
+    onCommit: (patch: import('../persistence/views').ValuePatch, additions?: import('../domain/model').ResourceInstance[]) => commitCharacterView(character.id, patch, additions)
+  };
+  const groups = system.definition.character_creation_flow.flatMap(page => {
+    try { return sessionViews(object(page).view).filter(v => v.type === 'section' && Array.isArray(v.content) && v.content.some(c => object(c).type === 'stat')); }
+    catch { return []; }
+  });
   return <>
     <button className="link-button back-link" onClick={() => navigate('characters')}><ArrowLeft size={17} />{it.back}</button>
     <PageHeading eyebrow={`${system.definition.name.toLocaleUpperCase('it')} / ${it.manual.toLocaleUpperCase('it')}`} title={character.name}
@@ -68,10 +82,13 @@ export function CharacterSheet({ character, system, run }: { character: Characte
     {system.diagnostics.length > 0 && <Warning>{it.rulesWarning} <button className="link-button" onClick={() => { useUi.getState().selectSystem(system.key); navigate('diagnostics'); }}>{it.diagnostics}</button></Warning>}
     <div className="sheet-layout"><div className="sheet-main">
       <div className="section-title"><h2>{it.sheet}</h2><span className="small-label">{it.generatedBySystem}</span></div>
-      {system.definition.character_sheet_sections.map(section => <RenderView key={section.id} input={section.view} context={{
-        stats: system.definition.character_stats, values: character.values, onChange: change,
-        createdAt: character.createdAt, resources, resourceDefinitions: system.definition.resources
-      }} />)}
+      {system.definition.character_sheet_sections.map(section => <RenderView key={section.id} input={section.view} context={context} />)}
+      {groups.length > 0 && <details className="base-editor"><summary>{it.sourceFormGroups}</summary><p className="muted">{it.sourceFormHelp}</p>
+        {groups.map((v, i) => <button className="button secondary" key={`${v.id}:${i}`} onClick={() => setSourceGroup(v)}>{it.edit} · {v.id}</button>)}
+      </details>}
+      {sourceGroup && <Modal title={`${it.edit} · ${sourceGroup.id}`} onClose={() => !formBusy && setSourceGroup(null)}>
+        <p className="muted">{it.sourceFormHelp}</p><SourceForm input={manualFieldGroup(sourceGroup)} context={context} onBusyChange={setFormBusy} onDone={() => setSourceGroup(null)} />
+      </Modal>}
       {!system.definition.character_sheet_sections.length && <Warning>{it.noSections}</Warning>}
       <details className="base-editor"><summary>{it.baseValues}</summary><p className="muted">{it.baseHelp}</p><div className="base-grid">
         {system.definition.character_stats.filter(s => s.type === 'base').map(s => <FieldInput key={s.id} stat={s} value={character.values[s.id]} resources={resources} onSave={value => change(s.id, value)} />)}

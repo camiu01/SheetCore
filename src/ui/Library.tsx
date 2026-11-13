@@ -6,6 +6,7 @@ import { demoOriginal } from '../demo';
 import { MAX_SYSTEM_BYTES, prepareSystem } from '../importing/system';
 import { artifactBytes, prepareImport } from '../importing/package';
 import { importFromUrl } from '../importing/url';
+import { discoverGithub, githubRepository, importGithubFile, type GithubSnapshot } from '../importing/github';
 import { installSystem } from '../persistence/db';
 import { it } from './it';
 import { CompatibilityBadge, Modal, PageHeading, Warning, download, downloadBlob, type Run } from './shared';
@@ -18,14 +19,34 @@ export function Library({ systems, run }: { systems: StoredSystem[]; run: Run })
   const [showUrl, setShowUrl] = useState(false);
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
+  const busy = useRef(false);
+  const [repository, setRepository] = useState<GithubSnapshot | null>(null);
+  const [repositoryRef, setRepositoryRef] = useState('');
+  const [repositoryPath, setRepositoryPath] = useState('');
   const { navigate, selectSystem } = useUi();
   async function prepare(original: string, source: string) { setPreview(await prepareSystem(original, source)); }
-  async function fromUrl() {
+  async function load(action: () => Promise<void>) {
+    if (busy.current) return;
+    busy.current = true;
     setLoading(true);
-    try {
-      setPreview(await importFromUrl(url));
-      setShowUrl(false);
-    } finally { setLoading(false); }
+    try { await action(); } finally { busy.current = false; setLoading(false); }
+  }
+  async function fromUrl() {
+    await load(async () => {
+      if (githubRepository(url)) {
+        const snapshot = await discoverGithub(url, repositoryRef);
+        setRepository(snapshot); setRepositoryPath(snapshot.files[0].path);
+      } else {
+        setPreview(await importFromUrl(url.trim())); setShowUrl(false);
+      }
+    });
+  }
+  async function fromRepository() {
+    if (!repository) return;
+    await load(async () => {
+      setPreview(await importGithubFile(repository, repositoryPath));
+      setRepository(null); setShowUrl(false);
+    });
   }
   return <>
     <PageHeading eyebrow={it.libraryEyebrow} title={it.systems} description={it.systemSubtitle}
@@ -42,7 +63,7 @@ export function Library({ systems, run }: { systems: StoredSystem[]; run: Run })
       <div className="import-panel">
         <div className="panel-icon"><FolderInput size={24} /></div><h2>{it.importSystem}</h2><p className="muted">{it.importHelp}</p>
         <div className="button-row"><button className="button secondary" onClick={() => file.current?.click()}><Upload size={17} />{it.localFile}</button>
-          <button className="button text-button" onClick={() => setShowUrl(true)}><Globe size={16} />{it.importUrl}</button></div>
+          <button className="button text-button" onClick={() => { setRepository(null); setShowUrl(true); }}><Globe size={16} />{it.importUrl}</button></div>
         <small className="muted">{it.jsonSafety}</small>
       </div>
       <div className="demo-panel">
@@ -66,11 +87,23 @@ export function Library({ systems, run }: { systems: StoredSystem[]; run: Run })
       </article>)}
     </div>
     <div className="footnote"><BookOpen size={18} /><div><strong>{it.versions}</strong><p>{it.versionHelp}</p></div></div>
-    {showUrl && <Modal title={it.importUrl} onClose={() => setShowUrl(false)}><form onSubmit={e => { e.preventDefault(); void run(fromUrl); }}>
-      <label className="field"><span>{it.url}</span><input type="url" value={url} onChange={e => setUrl(e.target.value)} placeholder="https://…" required /></label>
-      <p className="muted">{it.corsHelp}</p>
-      <button className="button primary" disabled={loading}>{loading ? it.loading : it.fetch}</button>
-    </form></Modal>}
+    {showUrl && <Modal title={it.importUrl} onClose={() => { if (!busy.current) { setShowUrl(false); setRepository(null); } }}>
+      {repository ? <form onSubmit={e => { e.preventDefault(); void run(fromRepository); }}>
+        <p className="muted">{it.repositoryResolved}</p>
+        <p className="repository-address"><strong>{repository.repository}</strong><br /><code>{repository.commit}</code></p>
+        <p className="muted">{it.repositoryHelp}</p>
+        <label className="field"><span>{it.repositoryFile}</span><select value={repositoryPath} disabled={loading} onChange={e => setRepositoryPath(e.target.value)}>
+          {repository.files.map(file => <option key={file.path} value={file.path}>{file.path} · {file.size} B</option>)}
+        </select></label>
+        <div className="modal-actions"><button className="button secondary" type="button" disabled={loading} onClick={() => setRepository(null)}>{it.repositoryChange}</button>
+          <button className="button primary" disabled={loading}>{loading ? it.loading : it.repositoryLoad}</button></div>
+      </form> : <form onSubmit={e => { e.preventDefault(); void run(fromUrl); }}>
+        <label className="field"><span>{it.url}</span><input type="text" inputMode="url" autoCapitalize="none" spellCheck={false} value={url} disabled={loading} onChange={e => setUrl(e.target.value)} placeholder="https://github.com/owner/repository.git" required /></label>
+        <label className="field"><span>{it.repositoryRef}</span><input value={repositoryRef} maxLength={200} disabled={loading} onChange={e => setRepositoryRef(e.target.value)} placeholder={it.repositoryDefault} /></label>
+        <p className="muted">{it.corsHelp}</p>
+        <button className="button primary" disabled={loading}>{loading ? it.loading : it.fetch}</button>
+      </form>}
+    </Modal>}
     {preview && <Modal title={it.importPreview} onClose={() => setPreview(null)}>
       <h3>{preview.definition.name} <small className="muted">v{preview.definition.version}</small></h3>
       <p>{preview.definition.character_stats.length} {it.stats} · {preview.definition.character_sheet_sections.length} {it.sections} · {preview.definition.resources.length} {it.resourceTypes}</p>

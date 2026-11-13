@@ -17,6 +17,9 @@ All displayed system labels and formulas come from the pinned import.
    Start the encounter, then advance turns/rounds. Expand base values to edit HP.
 5. Wait for the saving indicator before reloading. Offline reopening and backup
    restore retain HP, initialization overrides, initiative and turn position.
+   Supported source popups additionally stage actor fields until their explicit
+   Save. Multi-field saves are atomic and retain the existing override/linked-PC
+   write rules; cancellation never rolls or modifies persisted values.
 
 ## Verified semantics
 
@@ -53,7 +56,7 @@ All displayed system labels and formulas come from the pinned import.
 ## Not implemented
 
 General mechanics, event dispatch, lifecycle effects, stacking/reversal, equipment
-automation, official character creation, all resource views, generic Rollable
+automation, official character creation, unsupported resource views, generic Rollable
 actions and book/class/race archives. Unsupported fields stay diagnosed; imported
 systems remain labelled partial. Initializer support does not imply general
 effect-engine compatibility.

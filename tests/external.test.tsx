@@ -41,7 +41,7 @@ describe.skipIf(!existsSync(path))('5e 0.5.1 at pinned commit: explicit partial 
     expect(imported.definition.character_stats).toHaveLength(13);
     expect(imported.definition.resources).toHaveLength(1);
     expect(imported.diagnostics.filter(d => d.severity === 'error')).toEqual([]);
-    expect(imported.diagnostics.some(d => d.message.includes('icon'))).toBe(true);
+    expect(imported.diagnostics.some(d => d.message === 'Componente non supportato: icon')).toBe(false);
     expect(imported.diagnostics.some(d => d.path.endsWith('on_tap_event'))).toBe(true);
     const database = new SheetDatabase(`external-${crypto.randomUUID()}`);
     try {

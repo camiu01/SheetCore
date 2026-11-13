@@ -1,6 +1,6 @@
 # Threat Model for SheetCore
 
-Last updated: 2026-11-13. Version: 1.0.0. Method: STRIDE.
+Last updated: 2026-11-13. Version: 1.2.0. Method: STRIDE.
 This is a source review, not a penetration-test or compliance certification.
 
 ## 1. System Overview
@@ -51,9 +51,16 @@ metadata. Remote URL import is user initiated and subject to browser CORS.
 - Photos: 1 MiB PNG/JPEG, dimensions at most 4096 per axis, canonical Base64.
   Browser file selection also tests actual image decoding before saving.
 - HTTPS reader: no URL credentials; timeout and streamed bounds; cookies omitted.
-  It does not crawl repositories, proxy requests or merge remote documents.
+  Public GitHub discovery adds two metadata reads and an explicit selected-file
+  download at a pinned commit. No clone, proxy or remote document merge.
+  API payloads use the bounded JSON parser. Complete trees are required, with
+  10,000 entries/100 candidates; symlinks/submodules are excluded. Paths are
+  validated and encoded, and remote response URLs do not choose download hosts.
 - Local fixture scripts: argument-array Git subprocesses at pinned commits;
   no external compiler/tool code execution or automatic publication.
+- Source forms: independent input-ID scopes, safe palette/hex colors, bounded
+  view walks, validation-before-Save, busy/dismissal guards, atomic latest-owner
+  patches and local resource creation/assignment. Imported events remain inert.
 
 ## 4. Critical Assets & Data Classification
 
@@ -131,11 +138,25 @@ automated LLM scanning service or a new enforced CI gate.
   audit is separate. Build trusted application code only.
 - General mechanics/events, external resource archives and complete upstream
   compatibility are not provided. Do not infer them from import success.
-- Manual resource dialogs save a staged record; conflicting edits in another tab
-  can be overwritten on save. Character/combat field commands patch latest records.
+- Manual resource fallback dialogs save a staged record; conflicting edits in
+  another tab can be overwritten. Source edit forms and character/combat commands
+  patch latest records. Same-field updates remain last-committed-write wins.
+- Manual creation-field projections do not run group visibility or lifecycle;
+  they are not evidence of complete source-rule or creation-flow validity.
 - No security contacts or compliance framework were supplied; none is invented.
+- GitHub can be unavailable or rate-limited. Source commits/hashes provide
+  reproducibility, not publisher authentication or redistribution permission.
+  Only public repository metadata is queried; no local records or tokens are sent.
 
 ## 9. Version Changelog
+
+- 1.2.0 (2026-11-13): Public GitHub discovery and commit-pinned retrieval;
+  bounded untrusted API responses, safe paths, complete-tree checks and
+  credential-free requests. No Git execution or content-archive support.
+
+- 1.1.0 (2026-11-13): Scoped form drafts, strict source validation, safe view
+  colors and transactional local resource assignment; explicit manual-group
+  and nested-resource editing boundaries. No new network service or credential.
 
 - 1.0.0 (2026-11-13): Initial model covering source imports, contextual evaluation,
   typed photos/references, encounters, backup v3, offline storage and Pages CI/CD.

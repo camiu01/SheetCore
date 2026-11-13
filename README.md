@@ -69,10 +69,16 @@ npm run test:e2e
   independently bounded compressed/expanded size and exact original-file export.
 - Optional direct HTTPS JSON/`.rpg` URL import, with distinct GitHub-page,
   HTML-response, HTTP, timeout, and network/CORS diagnostics.
+- Public GitHub repository/`.git` discovery, optional branch/commit selection,
+  file choice and commit-pinned preview. No clone, compiler or account.
+  See [GitHub import](docs/GITHUB_IMPORT.md).
 - Multiple immutable system versions. Existing characters never silently move
   to another import, including when the source ID/version has not changed.
 - Multiple manual characters, source-generated supported sheet components,
   base-value editing, and controlled derived-stat evaluation.
+- Scoped `$view` drafts, source validation and atomic Save/Cancel forms.
+  Source popups, local note creation/selection, resource lists and manual
+  creation-page input groups are described in [source views](docs/VIEWS.md).
 - Local resource instances, plain-text detail views, manual notebook links to
   characters, editing, unlinking, and confirmed deletion.
 - Typed resource references, scalar lists, local PNG/JPEG photos, and documented
@@ -110,7 +116,7 @@ Reference repository:
   those errors rather than coercing them.
 - A clearly labelled, mechanically selected **ability/notes subset** retains
   source stat/view/resource objects unchanged. It is not a full 5e implementation.
-  The original section's unsupported roll events and icon remain visible.
+  The original section's icon renders; unsupported roll events remain visible.
 
 ### Prepare external tests locally
 
@@ -165,7 +171,7 @@ The separate resource-instance archive is **not imported**.
 The inspection script is optional: the browser can now import the original
 `5e/system.rpg` directly. Its exact gzip bytes are retained; existing characters
 using an earlier extracted JSON remain pinned to that different source import.
-This is not a generic `.rpg` decoder or a browser repository importer. No license was found in the
+This is not a generic `.rpg` decoder or a Git client. No license was found in the
 provided repository; none of its content is bundled. A GitHub Pages base URL
 returning 404 does not by itself prove its distribution endpoints are broken.
 
@@ -179,8 +185,10 @@ Its `5e/system.rpg` is gzip-JSON for `5e` version `0.6.0`.
 In **Da URL**, paste the
 [pinned direct system URL](https://raw.githubusercontent.com/derpsyhome/3rd-party-books-for-5e/00f55b2c3023c59f5857297dc933a7505c9b6aa4/5e/system.rpg),
 or download that file and choose it with **Scegli file JSON o .rpg**.
-The repository's normal GitHub page is HTML, not an import URL. GitHub **Raw**
-links to JSON/system files are different from `blob`/`tree` pages.
+Alternatively, paste the repository's root URL, with or without `.git`, set the
+optional branch/commit, and select `5e/system.rpg` from the discovered files.
+GitHub discovery uses the public API, not the repository's HTML page.
+`blob`/`tree` page URLs are not accepted; use the root URL and reference field.
 
 This imports the **system definition**, not the advertised books/classes/races
 contained in `resources.rpg.gzip`. Resource archives, `systems.rpg` distribution
@@ -222,8 +230,10 @@ no existing database or character is migrated to a different import.
 - **E:** SheetCore characters, local resource records, preferences and backups
   use an **internal format**, not an RPG Companion character export format.
 - No official character-creation pages, general lifecycle/event/mechanic engine,
-  progression, enumerated selectors, `$view` scopes, general modifier/override
+  progression, enumerated selectors, general modifier/override
   stacking, or 3D dice. Combat supports only its documented command subset.
+  `$view` exists only inside implemented edit sessions, not as a global
+  placeholder. Manual field groups do not execute official page visibility/hooks.
 - Unknown components and fields are preserved and reported. Rule-affecting
   omissions make a system only partially usable. Invalid interpreted fields
   block installation.

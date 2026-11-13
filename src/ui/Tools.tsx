@@ -40,7 +40,7 @@ export function Resources({ systems, system, characters, run }: SystemPageProps 
       const d = defs.find(d => d.id === r.definitionId);
       return <article key={r.id} className="resource-card"><div className="card-title-row"><span className="eyebrow">{d?.name}</span><button className="icon-button danger-text" aria-label={`${it.delete} ${r.name}`} onClick={() => setDeleting(r)}><Trash2 size={17} /></button></div>
         <h2>{r.name}</h2>{d?.display_view ? <RenderView input={d.display_view} context={{
-          stats: d.stats, values: r.values, createdAt: r.createdAt, resources, resourceDefinitions: defs
+          systemKey: system.key, stats: d.stats, values: r.values, createdAt: r.createdAt, resources, resourceDefinitions: defs
         }} /> : <p className="muted">{it.noResourceView}</p>}
         <button className="link-button" onClick={() => { setDefinitionId(r.definitionId); setEditing(r); }}>{it.edit}</button>
         {eligible.length > 0 && <div className="resource-attach"><label className="field"><span>{it.characters}</span><select aria-label={`${it.characters} · ${r.name}`} value={selectedCharacter} onChange={e => setCharacterId(e.target.value)}>{eligible.map(c => <option value={c.id} key={c.id}>{c.name}</option>)}</select></label>

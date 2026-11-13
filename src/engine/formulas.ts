@@ -9,7 +9,8 @@ export class RuntimeResource {
   constructor(
     readonly key: string, readonly stats: Stat[], readonly values: Record<string, unknown>,
     readonly createdAt?: string, readonly variables: Record<string, unknown> = {},
-    readonly overrides: Record<string, unknown> = {}
+    readonly overrides: Record<string, unknown> = {},
+    readonly instanceId?: string
   ) {}
 }
 export interface EvaluationEnvironment {
@@ -83,10 +84,62 @@ export const formulaFields: Record<string, string[]> = {
   greaterThan: ['components'], greaterThanEquals: ['components'],
   lessThan: ['components'], lessThanEquals: ['components'],
   length: ['components'], not: ['components'], roll: ['formula'],
-  trim: ['components'], flatAppend: ['components', 'treat_as_set'], notEquals: ['components'], or: ['components']
+  trim: ['components'], flatAppend: ['components', 'treat_as_set'], notEquals: ['components'], or: ['components'],
+  isNull: ['components'], toLowerCase: ['components'],
+  contains: ['haystack', 'needle'], flatMap: ['components', 'mapper', 'map_value_key'],
+  findFirst: ['components', 'filter', 'find_first_value_key'],
+  sortBy: ['components', 'sort_by_selector', 'sort_by_value_key', 'order']
 };
 /** Extensible handler registry. No dynamic JavaScript evaluation is used. */
 export const formulaHandlers = new Map<string, Handler>([
+  ['isNull', (n, e) => e(n.components) === null],
+  ['toLowerCase', (n, e) => {
+    const value = e(n.components);
+    if (typeof value !== 'string') throw new Error('toLowerCase richiede testo');
+    return value.toLowerCase();
+  }],
+  ['contains', (n, e) => {
+    const values = e(n.haystack), needle = e(n.needle);
+    if (typeof values === 'string') {
+      if (typeof needle !== 'string') throw new Error('contains richiede un testo da cercare');
+      return values.includes(needle);
+    }
+    return array(values).some(v => v === needle || (isResourceReference(v) && isResourceReference(needle) && v.resourceId === needle.resourceId));
+  }],
+  ['flatMap', (n, e, _get, scope) => {
+    const key = n.map_value_key ?? '$mapValue';
+    if (typeof key !== 'string' || !/^\$?[\w-]+$/.test(key)) throw new Error('Chiave flatMap non valida');
+    const result: unknown[] = [];
+    for (const value of array(e(n.components))) {
+      const mapped = array(scope.scoped(key, value, n.mapper));
+      if (result.length + mapped.length > 10000) throw new Error('Lista calcolata troppo grande');
+      result.push(...mapped);
+    }
+    return result;
+  }],
+  ['findFirst', (n, e, _get, scope) => {
+    const key = n.find_first_value_key ?? '$findFirstValue';
+    if (typeof key !== 'string' || !/^\$?[\w-]+$/.test(key)) throw new Error('Chiave findFirst non valida');
+    for (const value of array(e(n.components))) {
+      const match = n.filter == null ? true : scope.scoped(key, value, n.filter);
+      if (typeof match !== 'boolean') throw new Error('findFirst richiede una condizione booleana');
+      if (match) return value;
+    }
+    return null;
+  }],
+  ['sortBy', (n, e, _get, scope) => {
+    if (n.order !== 'asc' && n.order !== 'desc') throw new Error('Ordine sortBy non valido');
+    const key = n.sort_by_value_key ?? '$sortByValue';
+    if (typeof key !== 'string' || !/^\$?[\w-]+$/.test(key)) throw new Error('Chiave sortBy non valida');
+    const values = array(e(n.components)).map(value => ({ value, selected: scope.scoped(key, value, n.sort_by_selector) }));
+    const type = typeof values[0]?.selected;
+    if (!values.every(v => typeof v.selected === type && (typeof v.selected === 'string' || (typeof v.selected === 'number' && Number.isFinite(v.selected)))))
+      throw new Error('sortBy richiede chiavi omogenee, testi o numeri finiti');
+    return values.sort((a, b) => {
+      const av = a.selected as string | number, bv = b.selected as string | number;
+      return (av < bv ? -1 : av > bv ? 1 : 0) * (n.order === 'desc' ? -1 : 1);
+    }).map(v => v.value);
+  }],
   ['constant', n => {
     if (typeof n.value_type !== 'string' || !matchesType(n.value, n.value_type, typeof n.sub_value_type === 'string' ? n.sub_value_type : undefined))
       throw new Error('Costante con tipo o valore non valido');
@@ -271,7 +324,7 @@ export function createEvaluator(stats: Stat[], values: Record<string, unknown> =
     const record = resources.get(value.resourceId);
     const definition = environment.resourceDefinitions?.find(d => d.id === record?.definitionId);
     if (!record || !definition) throw new MissingStat(`Risorsa mancante: ${value.resourceId}`);
-    const scope = new RuntimeResource(`resource:${record.id}`, definition.stats, record.values, record.createdAt);
+    const scope = new RuntimeResource(`resource:${record.id}`, definition.stats, record.values, record.createdAt, {}, {}, record.id);
     scopes.set(record.id, scope);
     return scope;
   }
@@ -331,6 +384,7 @@ export function createEvaluator(stats: Stat[], values: Record<string, unknown> =
       if (Object.hasOwn(scope.variables, id)) return presence ? true : scope.variables[id];
       if (Object.hasOwn(environment.variables ?? {}, id)) return presence ? true : environment.variables?.[id];
       const s = scope.stats.find(s => s.id === id);
+      if (!s && id === 'id' && scope.instanceId) return presence ? true : scope.instanceId;
       if (!s && id === 'created_at' && scope.createdAt) return presence ? true : scope.createdAt;
       if (!s) throw new MissingStat(`Statistica mancante: ${id}`);
       if (presence) return true;

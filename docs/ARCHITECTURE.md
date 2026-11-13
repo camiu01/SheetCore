@@ -8,6 +8,7 @@
 | `src/importing/system.ts` | Bounded JSON parsing, structure, semantic diagnostics, provenance/hash |
 | `src/importing/package.ts` | Bounded native gzip-JSON decoding and exact binary-source retention |
 | `src/importing/url.ts` | Direct HTTPS downloads, URL/HTML/HTTP/timeout/network diagnostics |
+| `src/importing/github.ts` | Public GitHub metadata discovery, explicit file choice and commit-pinned download |
 | `src/engine/formulas.ts` | React-independent formula registry and bounded evaluator |
 | `src/engine/dice.ts` | Bounded manual dice expression and unbiased random faces |
 | `src/persistence/db.ts` | Dexie schema, migrations, immutable imports and transactional writes |
@@ -16,6 +17,8 @@
 | `src/ui/CombatTracker.tsx`, `src/ui/FieldInput.tsx` | Encounter controls and typed base editors |
 | `src/domain/photo.ts`, `src/domain/references.ts` | Bounded raster images and exact-version reference integrity |
 | `src/ui/renderer.tsx` | View registry, safe plain-text rendering, scalar inputs and fallbacks |
+| `src/engine/view-session.ts`, `src/ui/SourceForm.tsx` | Scoped input drafts, source validation, explicit Save/Cancel |
+| `src/ui/SourceViews.tsx`, `src/persistence/views.ts` | Popup/local resource controls and atomic latest-owner patches |
 | `src/ui/store.ts` | Only ephemeral navigation, selection and search, not copies of DB data |
 | `src/ui/it.ts` | Initial Italian UI catalogue |
 | `src/ui/Library.tsx` | Local/HTTPS file import preview and confirmation |
@@ -56,8 +59,14 @@ local notebook records without triggering effects. Typed resource base fields
 use an explicitly internal `{resourceId: string}` reference, not a claimed upstream
 instance format. Nested/optional paths resolve local records and declared resource
 definitions under a shared evaluation budget. Lambda bindings retain outer scopes.
+Local resource instances also expose their internal ID through `.id` unless a
+source stat declares that name. Collection formulas use this identity for
+resource membership and original `findFirst` predicates. Stable sorting never
+mutates a persisted base array; flat mapping retains the same collection limits.
 Only explicit combat commands receive combat variables and a roll capability;
-rendering never rolls. `$view` and general parent/event scopes remain unsupported.
+rendering never rolls. `$view` exists only in an explicit form session and
+contains actual input values keyed by source view IDs. General parent/event
+scopes remain unsupported.
 
 ## Mutation flow
 
@@ -76,9 +85,26 @@ updates to distinct fields do not overwrite stale state. Same-field updates
 use transaction order, last committed write wins. Invalid drafts remain visible
 in the input, are not saved, and are not presented as successful writes.
 
-The manual creator does not evaluate original creation pages. Resource forms
-are also explicitly manual, not an implementation of the original edit-view
-validation lifecycle.
+The manual creator does not execute original creation pages. A separate manual
+editor projects each selected group's unchanged input nodes into a new local
+form, without applying the original group's visibility or lifecycle hooks.
+Individual input visibility, bounds and validation remain enforced. Original
+calculated stats whose direct `$view` dependencies exist in that form are shown
+as source-derived read-only results, including the six point-buy costs.
+
+Source resource edit views and popups use independent draft dictionaries.
+Nested popup Save stages into the enclosing draft, not directly into the DB.
+Cancellation discards drafts and newly staged instances. Every source validation
+must return null before Save; non-null text and evaluator failures block Save.
+Forms retain input on failed persistence and display the error. Their Save
+button stays busy and dismissal is blocked until the transaction completes.
+
+Character, resource and combat form patches reread latest owners inside Dexie
+transactions. Resource creation and assignment commit atomically; append/unlink/
+reorder callbacks operate on latest arrays. Only changed fields are patched.
+Combat forms preserve linked-PC and initializer-override ownership. The manual
+fallback resource editor still stages a whole record when no edit view exists.
+See [view contracts and limitations](VIEWS.md).
 
 ## Safety limits
 
@@ -103,9 +129,13 @@ validation lifecycle.
 | Computed collections/text | 10,000 elements / 1 MiB text |
 | Local photo | 1 MiB PNG/JPEG; dimensions 1–4,096 per axis; remote URLs never requested |
 | URL import | HTTPS, no credentials, omitted cookies/referrer; 15 s timeout; streamed size bound |
+| GitHub discovery | 8 MiB per response; 10,000 tree entries, 100 candidates; complete tree required; no clone |
 | Input text | Generally 10,000 characters; source `max_length` can tighten supported text inputs |
 
 These are application safety limits, not claims about upstream format limits.
+GitHub discovery resolves a commit before listing files and downloads only a
+selected regular blob. It does not compile authoring trees or import resource
+archives. See [GitHub import boundaries](GITHUB_IMPORT.md).
 Prototype-related keys are rejected at every parsed object depth. The interpreter
 does not execute source code or load remote images. Plain React text escapes
 HTML. No HTML or Markdown interpretation is offered. Numeric operations require

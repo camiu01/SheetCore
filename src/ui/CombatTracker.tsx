@@ -5,6 +5,7 @@ import type { Character, Combat, ResourceInstance, StoredSystem } from '../domai
 import { combatContext, eligibleCombatants, initiativeOrder } from '../engine/combat';
 import { commandCombat, createCombat, type CombatCommand } from '../persistence/combat';
 import { db } from '../persistence/db';
+import { commitCombatView, type ValuePatch } from '../persistence/views';
 import { FieldInput } from './FieldInput';
 import { RenderView } from './renderer';
 import { Empty, Modal, PageHeading, SystemSelect, Warning, type Run } from './shared';
@@ -94,9 +95,10 @@ function CombatDetail({ system, combat, resources, characters, run }: {
         const evaluator = context.actor(f.id);
         let title = type.name;
         try { const name = evaluator.get('name'); if (typeof name === 'string' && name) title = name; } catch { /* The source may not declare a name stat. */ }
-        const renderContext = { ...context.environment, createdAt: scope.createdAt, stats: scope.stats, values: scope.values,
+        const renderContext = { ...context.environment, systemKey: system.key, createdAt: scope.createdAt, stats: scope.stats, values: scope.values,
           overrides: scope.overrides, variables: { ...context.environment.variables, ...scope.variables },
-          onChange: (statId: string, value: unknown) => execute({ type: 'value', id: f.id, statId, value }) };
+          onChange: (statId: string, value: unknown) => execute({ type: 'value', id: f.id, statId, value }),
+          onCommit: (patch: ValuePatch, additions?: ResourceInstance[]) => commitCombatView(combat.id, f.id, patch, additions) };
         return <article key={f.id} className={`combatant-card ${current?.id === f.id ? 'combatant-current' : ''}`}>
           <div className="combat-meta"><h3>{title}</h3><span className="badge">{type.side}</span>{current?.id === f.id && <strong>{it.currentTurn}</strong>}</div>
           <label className="field"><span>{it.initiative} · {title}</span><input aria-label={`${it.initiative} · ${title}`} type="number" step={1} disabled={combat.status === 'active'}
