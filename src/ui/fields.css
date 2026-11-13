@@ -1,0 +1,14 @@
+.local-photo{width:100px;height:100px;object-fit:cover;border-radius:18px}
+.photo-small{width:48px;height:48px}.photo-massive{width:180px;height:180px}
+.photo-placeholder{display:grid;place-items:center;width:64px;height:64px;border:1px solid currentColor;border-radius:18px;font:30px Georgia,serif}
+.photo-preview-button{padding:0;border:0;background:none;cursor:zoom-in}
+.photo-expanded{max-width:100%;max-height:70vh;object-fit:contain}
+.photo-field input[type=file]{max-width:100%}
+.array-item{display:flex;align-items:center;gap:12px}.array-item>.field{flex:1;min-width:0}
+.reference-options{max-height:300px;overflow:auto}
+fieldset.field{min-width:0;border:1px solid #9ba69e55;border-radius:12px;padding:14px}
+.combat-toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:20px 0}
+.combatant-card{padding:18px;border:1px solid #9ba69e55;border-radius:16px;margin-bottom:14px}
+.combatant-current{outline:2px solid #738e66;outline-offset:2px}
+.combatant-card .base-grid{margin-top:14px}
+.combat-meta{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
