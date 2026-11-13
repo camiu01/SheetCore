@@ -6,7 +6,7 @@ import { boundedJson, decodeUtf8, parseSystem, prepareSystem } from '../src/impo
 describe('monolithic JSON import', () => {
   it('validates the original distributed fixture without compatibility warnings', () => {
     const parsed = parseSystem(demoOriginal);
-    expect(parsed.definition.id).toBe('sheetcore-sentieri');
+    expect(parsed.definition.id).toBe('polysheet-sentieri');
     expect(parsed.diagnostics).toEqual([]);
   });
   it('preserves unknown fields and identifies their exact path', () => {

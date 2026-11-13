@@ -85,7 +85,7 @@ export const formulaFields: Record<string, string[]> = {
   lessThan: ['components'], lessThanEquals: ['components'],
   length: ['components'], not: ['components'], roll: ['formula'],
   trim: ['components'], flatAppend: ['components', 'treat_as_set'], notEquals: ['components'], or: ['components'],
-  isNull: ['components'], toLowerCase: ['components'],
+  isNull: ['components'], notNull: ['components'], toLowerCase: ['components'],
   contains: ['haystack', 'needle'], flatMap: ['components', 'mapper', 'map_value_key'],
   findFirst: ['components', 'filter', 'find_first_value_key'],
   sortBy: ['components', 'sort_by_selector', 'sort_by_value_key', 'order']
@@ -93,6 +93,7 @@ export const formulaFields: Record<string, string[]> = {
 /** Extensible handler registry. No dynamic JavaScript evaluation is used. */
 export const formulaHandlers = new Map<string, Handler>([
   ['isNull', (n, e) => e(n.components) === null],
+  ['notNull', (n, e) => e(n.components) !== null],
   ['toLowerCase', (n, e) => {
     const value = e(n.components);
     if (typeof value !== 'string') throw new Error('toLowerCase richiede testo');

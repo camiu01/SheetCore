@@ -43,7 +43,7 @@ jobs:
       - name: Test desktop and mobile under a Pages subdirectory
         run: npm run test:e2e -- --max-failures=1
         env:
-          PLAYWRIGHT_BASE_PATH: /SheetCore/
+          PLAYWRIGHT_BASE_PATH: /PolySheet/
       - name: Retain browser failure evidence
         if: failure()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6

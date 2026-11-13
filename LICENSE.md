@@ -1,6 +1,6 @@
 # MIT License
 
-Copyright (c) 2026 SheetCore contributors
+Copyright (c) 2026 PolySheet contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

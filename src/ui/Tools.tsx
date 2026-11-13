@@ -1,6 +1,6 @@
 /**
  * @file Local resource, dice, compatibility, and backup screens.
- * @remarks Resource links are SheetCore notebook metadata, not RPG rule effects.
+ * @remarks Resource links are PolySheet notebook metadata, not RPG rule effects.
  */
 import { useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -24,6 +24,7 @@ function Selector({ systems, system }: Omit<SystemPageProps, 'run'>) {
 export function Resources({ systems, system, characters, run }: SystemPageProps & { characters: Character[] }) {
   const resources = useLiveQuery(() => system ? db.resources.where('systemKey').equals(system.key).toArray() : [], [system?.key]) ?? [];
   const [editing, setEditing] = useState<ResourceInstance | 'new' | null>(null);
+  const [resourceBusy, setResourceBusy] = useState(false);
   const [definitionId, setDefinitionId] = useState('');
   const [deleting, setDeleting] = useState<ResourceInstance | null>(null);
   const [characterId, setCharacterId] = useState('');
@@ -40,16 +41,17 @@ export function Resources({ systems, system, characters, run }: SystemPageProps 
       const d = defs.find(d => d.id === r.definitionId);
       return <article key={r.id} className="resource-card"><div className="card-title-row"><span className="eyebrow">{d?.name}</span><button className="icon-button danger-text" aria-label={`${it.delete} ${r.name}`} onClick={() => setDeleting(r)}><Trash2 size={17} /></button></div>
         <h2>{r.name}</h2>{d?.display_view ? <RenderView input={d.display_view} context={{
-          systemKey: system.key, stats: d.stats, values: r.values, createdAt: r.createdAt, resources, resourceDefinitions: defs
+          systemKey: system.key, stats: d.stats, values: r.values, createdAt: r.createdAt, resources, resourceDefinitions: defs,
+          enumerations: system.definition.enumerated_types
         }} /> : <p className="muted">{it.noResourceView}</p>}
         <button className="link-button" onClick={() => { setDefinitionId(r.definitionId); setEditing(r); }}>{it.edit}</button>
         {eligible.length > 0 && <div className="resource-attach"><label className="field"><span>{it.characters}</span><select aria-label={`${it.characters} · ${r.name}`} value={selectedCharacter} onChange={e => setCharacterId(e.target.value)}>{eligible.map(c => <option value={c.id} key={c.id}>{c.name}</option>)}</select></label>
           <button className="button secondary" onClick={() => void run(() => attachResource(selectedCharacter, r.id))}>{it.attach}</button></div>}
       </article>;
     })}</div> : <Empty title={it.noResources}>{it.resourceHelp}</Empty>}
-    {editing && system && <Modal title={editing === 'new' ? it.newResource : it.edit} onClose={() => setEditing(null)}>
+    {editing && system && <Modal title={editing === 'new' ? it.newResource : it.edit} onClose={() => !resourceBusy && setEditing(null)}>
       {definition && <ResourceEditor key={chosenId} system={system} definition={definition} editing={editing} resources={resources}
-        onSelect={setDefinitionId} onDone={() => setEditing(null)} run={run} />}
+        onSelect={setDefinitionId} onDone={() => setEditing(null)} onBusyChange={setResourceBusy} run={run} />}
     </Modal>}
     {deleting && <Modal title={it.deleteResource} onClose={() => setDeleting(null)}><div className="modal-actions"><button className="button secondary" onClick={() => setDeleting(null)}>{it.cancel}</button><button className="button danger" onClick={() => void run(async () => {
       await deleteResource(deleting.id); setDeleting(null);
@@ -113,7 +115,7 @@ export function Settings({ preferences, run }: { preferences: Preferences; run: 
           });
         });
       }} /></label><p className="muted">{it.installHelp}</p></section>
-      <section className="settings-panel backup-panel"><div className="panel-icon"><HardDrive size={24} /></div><h2>{it.backup}</h2><p className="muted">{it.backupHelp}</p><div className="button-row"><button className="button primary" onClick={() => void run(async () => download(await exportBackup(), `sheetcore-${new Date().toISOString().slice(0, 10)}.json`))}><ArrowDownToLine size={17} />{it.export}</button><button className="button secondary" onClick={() => file.current?.click()}><Upload size={17} />{it.restore}</button></div>
+      <section className="settings-panel backup-panel"><div className="panel-icon"><HardDrive size={24} /></div><h2>{it.backup}</h2><p className="muted">{it.backupHelp}</p><div className="button-row"><button className="button primary" onClick={() => void run(async () => download(await exportBackup(), `polysheet-${new Date().toISOString().slice(0, 10)}.json`))}><ArrowDownToLine size={17} />{it.export}</button><button className="button secondary" onClick={() => file.current?.click()}><Upload size={17} />{it.restore}</button></div>
         <input ref={file} type="file" accept=".json,application/json" aria-label={it.restore} className="sr-only" onChange={e => {
           const f = e.target.files?.[0]; e.target.value = '';
           if (f) void run(async () => { const text = await readFile(f, 32 * 1024 * 1024); setBackup({ text, data: await validateBackup(text) }); });

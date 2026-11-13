@@ -68,6 +68,7 @@ export function CharacterSheet({ character, system, run }: { character: Characte
   const context = {
     stats: system.definition.character_stats, values: character.values, onChange: change,
     systemKey: system.key, createdAt: character.createdAt, resources, resourceDefinitions: system.definition.resources,
+    enumerations: system.definition.enumerated_types,
     onCommit: (patch: import('../persistence/views').ValuePatch, additions?: import('../domain/model').ResourceInstance[]) => commitCharacterView(character.id, patch, additions)
   };
   const groups = system.definition.character_creation_flow.flatMap(page => {

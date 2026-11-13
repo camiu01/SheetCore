@@ -24,7 +24,7 @@ export function SourceForm({ input, context, onDone, onBusyChange, saveText = it
   try {
     const nodes = sessionViews(input);
     const environment = { ...context, resources: [...(context.resources ?? []), ...additions],
-      variables: { ...context.variables, $view: drafts } };
+      variables: { ...context.variables, $view: drafts, $edit_mode: true } };
     const errors = validationMessages(input, context.stats, context.values, drafts, environment);
     function update(id: string, value: unknown) {
       latestChanges.current = { ...latestChanges.current, [id]: value };
@@ -57,7 +57,7 @@ export function SourceForm({ input, context, onDone, onBusyChange, saveText = it
     }}>
       <fieldset disabled={busy} className="source-form-fields"><RenderView input={input} context={formContext} />
         <div className="base-grid">{draftCalculations(context.stats, drafts).map(s =>
-          <RenderView key={s.id} input={{ id: `sheetcore-derived-${s.id}`, type: 'stat', stat: s.id }} context={{ ...formContext, onChange: undefined, onInput: undefined }} />
+          <RenderView key={s.id} input={{ id: `polysheet-derived-${s.id}`, type: 'stat', stat: s.id }} context={{ ...formContext, onChange: undefined, onInput: undefined }} />
         )}</div>
       </fieldset>
       {error && <p role="alert" className="error-text">{error}</p>}

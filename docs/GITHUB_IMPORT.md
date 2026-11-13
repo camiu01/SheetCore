@@ -80,7 +80,7 @@ An intentional live, read-only check uses the pinned derpsy commit
 
 ```powershell
 $env:PLAYWRIGHT_PORT = '4183'
-$env:PLAYWRIGHT_BASE_PATH = '/SheetCore/'
+$env:PLAYWRIGHT_BASE_PATH = '/PolySheet/'
 $env:LIVE_GITHUB_IMPORT = '1'
 npm run test:e2e -- --grep 'live public GitHub'
 Remove-Item Env:LIVE_GITHUB_IMPORT

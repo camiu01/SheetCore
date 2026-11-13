@@ -78,7 +78,7 @@ export function SourceResourceSelect({ node: v, context: ctx }: { node: View; co
     {v.filters != null ? <p data-view-error className="unsupported">{it.unsupported}: filters</p> : creating ? definition.edit_view ? <SourceForm
       input={definition.edit_view} onBusyChange={setBusy} onDone={() => setOpen(false)} context={{
         systemKey: ctx.systemKey, stats: definition.stats, values: initialValues(definition.stats),
-        resources: ctx.resources, resourceDefinitions: ctx.resourceDefinitions,
+        resources: ctx.resources, resourceDefinitions: ctx.resourceDefinitions, enumerations: ctx.enumerations,
         onCommit: async (patch, additions = []) => {
           if (!ctx.systemKey) throw new Error(it.formReadOnly);
           const values = initialValues(definition.stats);

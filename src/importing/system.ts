@@ -26,7 +26,15 @@ export const viewFields: Record<string, string[]> = {
   resourceSection: ['resource_stat', 'resource_set_stat', 'resource_id', 'header_view', 'read_only', 'tap_displays_resource', 'max_items_in_preview', 'reorganizable', 'content_item_min_width', 'alignment'],
   popUpButton: ['text', 'icon', 'pop_up_title', 'pop_up_view', 'display_cancel_button', 'cancel_text', 'display_save_button', 'save_text', 'should_persist_on_save', 'pop_up_type'],
   chip: ['text', 'background_color', 'border_color', 'style', 'resource_id', 'resource_instance_ids_stat', 'resource_display_stat'],
-  listItem: ['title', 'subtitle', 'first_line_extra', 'second_line_extra', 'title_color', 'subtitle_color', 'first_line_extra_color', 'second_line_extra_color']
+  listItem: ['title', 'subtitle', 'first_line_extra', 'second_line_extra', 'title_color', 'subtitle_color', 'first_line_extra_color', 'second_line_extra_color'],
+  collapsible: ['title', 'subtitle', 'subviews', 'start_expanded'],
+  viewPager: ['subviews', 'names', 'color'],
+  ticker: ['stat', 'style', 'button_location', 'button_look', 'change_amount', 'allowed_values', 'min_value_allowed', 'max_value_allowed', 'calculated_min_value_allowed', 'calculated_max_value_allowed', 'label', 'label_alignment', 'should_auto_save', 'always_show_sign', 'hide_value', 'edit_bottom_sheet_title'],
+  button: ['text', 'enabled'],
+  select: ['stat', 'meta_stat', 'options', 'allowed_options', 'resource_options', 'resource_saved_stat', 'max_selection_amount', 'options_display_stat', 'multi_select', 'style', 'should_auto_save'],
+  menuButton: ['icon_name', 'icon_size', 'icon_color', 'options', 'allowed_options'],
+  resource: ['resource_id', 'stat', 'view_type'],
+  resourceArray: ['resource_id', 'stat', 'left_view', 'pop_up_type', 'pop_up_button_text', 'view_type', 'hide_line', 'auto_add_first', 'allow_adds_and_removes']
 };
 const commonViewFields = ['type', 'id', 'is_visible', 'validation_message', 'margin_left', 'margin_right', 'margin_top', 'margin_bottom'];
 /** Only implemented enum variants may pass the renderer's behavioral boundary. */
@@ -36,7 +44,19 @@ export function unsupportedViewOptions(v: Record<string, unknown>): string[] {
     checkbox: { style: ['checkbox'], label_alignment: ['left', 'right'] },
     chip: { style: ['compact', 'fullSize'] },
     popUpButton: { pop_up_type: ['bottomSheet', 'alert'] },
-    selectResources: { view_type: ['list', 'icon'], inline_creation_mode: ['disabled', 'optional', 'only'], creation_pop_up_type: ['bottomSheet', 'window'] }
+    selectResources: { view_type: ['list', 'icon'], inline_creation_mode: ['disabled', 'optional', 'only'], creation_pop_up_type: ['bottomSheet', 'window'] },
+    collapsible: { start_expanded: ['true', 'false'] },
+    viewPager: {},
+    ticker: {
+      style: ['headline', 'title', 'section', 'subhead', 'text', 'caption'],
+      button_location: ['left', 'right', 'sideToSide'], button_look: ['plusMinus', 'upDown'],
+      label_alignment: ['left', 'right']
+    },
+    button: {},
+    select: { style: ['dropdown', 'list'] },
+    menuButton: { icon_size: ['small', 'medium', 'large'] },
+    resource: { view_type: ['display', 'edit', 'list'] },
+    resourceArray: { view_type: ['display', 'edit', 'list'], pop_up_type: ['bottomSheet', 'window'] }
   };
   return Object.entries(variants[String(v.type)] ?? {}).filter(([key, values]) => v[key] != null && !values.includes(String(v[key]))).map(([key]) => key);
 }
@@ -108,7 +128,7 @@ export function diagnose(system: SystemDefinition): Diagnostic[] {
         if (typeof node.stat !== 'string') report(`${path}.stat`, 'Riferimento richiesto', 'error');
         else try {
           const first = statPath(node.stat)[0];
-          const contexts = ['created_at', '$view', '$resource', '$combatants', '$combat', '$combat_difficulty', '$combatant', '$combatant_type', '$template_resource_id', '$instance_resource_id'];
+          const contexts = ['created_at', '$view', '$resource', '$combatants', '$combat', '$combat_difficulty', '$combatant', '$combatant_type', '$template_resource_id', '$instance_resource_id', '$edit_mode'];
           if (!stats.some(s => s.id === first.id) && !bindings.includes(first.id) && !contexts.includes(first.id) && !first.optional && type !== 'defined')
             report(`${path}.stat`, `Riferimento mancante o contesto non disponibile: ${node.stat}`);
         } catch (error) { report(`${path}.stat`, error instanceof Error ? error.message : String(error), 'error'); }
@@ -136,7 +156,7 @@ export function diagnose(system: SystemDefinition): Diagnostic[] {
       });
     } else if (Object.hasOwn(node, 'components') && !Array.isArray(node.components)) {
       checkFormula(node.components, `${path}.components`, stats, bindings, allowRoll);
-    } else if (['add', 'subtract', 'multiply', 'divide', 'and', 'or', 'isEmpty', 'isNull', 'toLowerCase', 'sortBy', 'findFirst', 'flatMap', 'concat', 'trim', 'date', 'max', 'min', 'map', 'filter', 'defaultIfNull', 'joinToString', 'equals', 'notEquals', 'length', 'not', 'greaterThan', 'greaterThanEquals', 'lessThan', 'lessThanEquals'].includes(type)) {
+    } else if (['add', 'subtract', 'multiply', 'divide', 'and', 'or', 'isEmpty', 'isNull', 'notNull', 'toLowerCase', 'sortBy', 'findFirst', 'flatMap', 'concat', 'trim', 'date', 'max', 'min', 'map', 'filter', 'defaultIfNull', 'joinToString', 'equals', 'notEquals', 'length', 'not', 'greaterThan', 'greaterThanEquals', 'lessThan', 'lessThanEquals'].includes(type)) {
       report(`${path}.components`, 'Formula components richiesta (non una lista JSON diretta)', 'error');
     }
     for (const field of ['mapper', 'filter', 'sort_by_selector', 'haystack', 'needle', 'default_components', 'meta_stat', 'formula']) {
@@ -163,8 +183,11 @@ export function diagnose(system: SystemDefinition): Diagnostic[] {
     for (const key of unsupportedViewOptions(v)) report(`${path}.${key}`, `Opzione non supportata: ${String(v[key])}`);
     if (v.type === 'popUpButton' && v.icon != null && object(v.icon).type !== 'icon')
       report(`${path}.icon`, 'popUpButton richiede una vista icon.');
-    for (const field of ['text', 'label', 'hint', 'is_visible', 'validation_message', 'enabled', 'override_label', 'pop_up_title', 'save_text', 'cancel_text', 'bottom_left_button_title', 'bottom_right_button_title', 'title', 'subtitle', 'first_line_extra', 'second_line_extra', 'title_color', 'subtitle_color', 'first_line_extra_color', 'second_line_extra_color'])
+    for (const field of ['text', 'label', 'hint', 'is_visible', 'validation_message', 'enabled', 'override_label', 'pop_up_title', 'save_text', 'cancel_text', 'bottom_left_button_title', 'bottom_right_button_title', 'title', 'subtitle', 'first_line_extra', 'second_line_extra', 'title_color', 'subtitle_color', 'first_line_extra_color', 'second_line_extra_color',
+      'names', 'allowed_values', 'calculated_min_value_allowed', 'calculated_max_value_allowed', 'meta_stat', 'allowed_options', 'resource_options', 'max_selection_amount', 'pop_up_button_text'])
       if (v[field] != null) checkFormula(v[field], `${path}.${field}`, stats, ['$view']);
+    // `viewPager.color` is a formula; icon, text and chip colours are literal palette values.
+    if (v.type === 'viewPager' && v.color != null) checkFormula(v.color, `${path}.color`, stats, ['$view']);
     for (const field of ['stat', 'edit_stat', 'photo_stat', 'name_stat']) if (v[field] != null) {
       if (typeof v[field] !== 'string') report(`${path}.${field}`, 'ID statistica richiesto', 'error');
       else if (!stats.some(s => s.id === v[field])) report(`${path}.${field}`, `Riferimento non risolto: ${v[field]}`);
@@ -173,9 +196,25 @@ export function diagnose(system: SystemDefinition): Diagnostic[] {
       if (v[field] != null && !Array.isArray(v[field])) report(`${path}.${field}`, 'Lista di viste richiesta', 'error');
       if (Array.isArray(v[field])) v[field].forEach((c, i) => checkView(c, `${path}.${field}[${i}]`, stats));
     }
-    for (const field of ['pop_up_view', 'icon', 'header_view']) if (v[field] != null) checkView(v[field], `${path}.${field}`, stats);
-    if (['list', 'composite'].includes(v.type) && !Array.isArray(v.subviews)) report(`${path}.subviews`, 'Lista richiesta', 'error');
+    for (const field of ['pop_up_view', 'icon', 'header_view', 'left_view']) if (v[field] != null) checkView(v[field], `${path}.${field}`, stats);
+    if (['list', 'composite', 'collapsible', 'viewPager'].includes(v.type) && !Array.isArray(v.subviews)) report(`${path}.subviews`, 'Lista richiesta', 'error');
     if (v.type === 'section' && (!Array.isArray(v.header) || !Array.isArray(v.content))) report(path, 'header e content richiesti', 'error');
+    if (v.type === 'viewPager') {
+      const names = object(v.names ?? {});
+      const components = Array.isArray(names.components) ? names.components : [];
+      if (names.type !== 'list' || components.length !== (Array.isArray(v.subviews) ? v.subviews.length : 0))
+        report(`${path}.names`, 'Nomi delle pagine richiesti: una costante per ogni subview.', 'error');
+    }
+    if (['resource', 'resourceArray'].includes(v.type) && !system.resources.some(r => r.id === v.resource_id))
+      report(`${path}.resource_id`, `Tipo di risorsa non risolto: ${String(v.resource_id)}`);
+    if (['ticker', 'select', 'resource', 'resourceArray'].includes(v.type) && typeof v.stat !== 'string')
+      report(`${path}.stat`, 'Campo base richiesto', 'error');
+    if (v.type === 'menuButton' && typeof v.options !== 'string')
+      report(`${path}.options`, 'Enumerazione richiesta', 'error');
+    if (v.type === 'select' && typeof v.options !== 'string' && v.resource_options == null && v.meta_stat == null)
+      report(`${path}.options`, 'Sorgente delle opzioni richiesta', 'error');
+    if (v.type === 'button' && (v.event != null || v.event_names != null))
+      report(`${path}.event`, 'Evento del pulsante non eseguito da PolySheet.');
   }
   function checkStats(stats: Stat[], path: string) {
     unique(stats, path);
@@ -240,7 +279,7 @@ export function diagnose(system: SystemDefinition): Diagnostic[] {
   }
   if (system.mechanics.length) report('$.mechanics', `${system.mechanics.length} meccaniche non eseguite: il sistema non è pienamente utilizzabile.`);
   if (Object.keys(system.progression_systems).length) report('$.progression_systems', 'Progressione automatica non supportata.');
-  if (system.enumerated_types.length) report('$.enumerated_types', 'Enumerazioni conservate, selettori e formule enumerated non supportati.');
+  if (system.enumerated_types.length) report('$.enumerated_types', 'Enumerazioni conservative: select e menuButton le usano; le formule enumerated del motore restano non supportate.');
   if (!system.dice) report('$.dice', 'Definizioni dadi assenti nella variante storica. Disponibile solo il lanciatore manuale dell’app.');
   system.resources.forEach((r, i) => {
     const p = `$.resources[${i}]`;

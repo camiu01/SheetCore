@@ -2,16 +2,22 @@
  * @file Source-driven, text-only view rendering with explicit unsupported markers.
  * @remarks Sheet inputs commit on blur; source forms own explicit `$view` drafts.
  */
-import { useState, type ReactNode, type CSSProperties } from 'react';
+import { Component, useState, type ReactNode, type CSSProperties } from 'react';
 import { createEvaluator, type EvaluationEnvironment } from '../engine/formulas';
 import { formula, object, view, type Stat, type View } from '../domain/model';
 import { unsupportedViewOptions, viewFields } from '../importing/system';
 import { it } from './it';
 import { PhotoInput } from './PhotoInput';
-import { BookOpen, Shield, Backpack, Swords, Flag, Dices, Skull, Sparkles, Star, Pencil, MoreHorizontal, MoreVertical, Sun, PawPrint, ArrowUp, ArrowUpDown, Flame, Badge, Circle } from 'lucide-react';
+import { inputValue, saveInput, sourceColor, sourceIcons, textValue } from './view-support';
 import { SourcePopup, SourceResourceSelect, SourceResourceSection, DeferredResourceSelect } from './SourceViews';
+import { SourceCollapsible, SourceViewPager } from './SourceLayoutViews';
+import { SourceButton, SourceMenuButton, SourceSelect, SourceTicker } from './SourceValueViews';
+import { SourceResourceArray, SourceResourceView } from './SourceResourceViews';
 import type { ValuePatch } from '../persistence/views';
 import type { ResourceInstance } from '../domain/model';
+
+export { textValue, sourceColor };
+
 
 export interface RenderContext extends EvaluationEnvironment {
   stats: Stat[];
@@ -23,6 +29,8 @@ export interface RenderContext extends EvaluationEnvironment {
   validationErrors?: Record<string, string>;
   onInput?: (viewId: string, statId: string, value: unknown) => void;
   previewValues?: Record<string, unknown>;
+  /** Raw `enumerated_types`; used by select and menu options only. */
+  enumerations?: unknown[];
 }
 /** Edit one supported scalar. Invalid numeric drafts never reach persistence. */
 export function ScalarInput({ stat, value, onSave, onDraft, label, min, max, maxLength, hint, step }: {
@@ -66,27 +74,6 @@ function children(items: unknown, ctx: RenderContext) {
   if (!Array.isArray(items)) throw new Error('Lista di componenti non valida');
   return items.map((v, i) => <RenderView key={String(object(v).id ?? i)} input={v} context={ctx} />);
 }
-export function textValue(value: unknown) {
-  if (value === null || value === undefined) return '';
-  if (typeof value === 'object') throw new Error('Valore complesso non visualizzabile come testo');
-  return String(value);
-}
-/** CSS accepts only documented colors or bounded hexadecimal literals. */
-export function sourceColor(value: unknown): string | undefined {
-  if (value == null) return undefined;
-  const colors: Record<string, string> = { accent: 'var(--accent)', primary: 'var(--accent)', primaryDark: 'var(--accent)', text: 'var(--ink)', hint: 'var(--muted)', buttonSurface: 'var(--surface-soft)' };
-  if (typeof value === 'string' && Object.hasOwn(colors, value)) return colors[value];
-  if (typeof value === 'string' && /^#(?:[a-f\d]{3}|[a-f\d]{6}|[a-f\d]{8})$/i.test(value)) return value;
-  throw new Error(it.invalidColor);
-}
-function inputValue(v: View, ctx: RenderContext, s: Stat) {
-  return ctx.drafts && Object.hasOwn(ctx.drafts, v.id) ? ctx.drafts[v.id]
-    : ctx.overrides && Object.hasOwn(ctx.overrides, s.id) ? ctx.overrides[s.id]
-    : Object.hasOwn(ctx.values, s.id) ? ctx.values[s.id] : s.default_value;
-}
-function saveInput(v: View, ctx: RenderContext, id: string, value: unknown) {
-  if (ctx.onInput) ctx.onInput(v.id, id, value); else ctx.onChange?.(id, value);
-}
 function resourceText(v: View, ctx: RenderContext) {
   if (v.resource_id == null) return undefined;
   const d = ctx.resourceDefinitions?.find(d => d.id === v.resource_id);
@@ -99,7 +86,7 @@ function resourceText(v: View, ctx: RenderContext) {
     return display ? textValue(createEvaluator(d.stats, r.values, undefined, { resources: ctx.resources, resourceDefinitions: ctx.resourceDefinitions, createdAt: r.createdAt }).get(display)) : r.name;
   }).join(', ');
 }
-const sourceIcons = { ic_armor: Shield, ic_backpack: Backpack, ic_battle: Swords, ic_campaign_banner: Flag, ic_d20: Dices, ic_death: Skull, ic_skills: Sparkles, ic_star: Star, ic_weapon: Swords, ic_badge: Badge, ic_conditions: Circle, ic_daytime: Sun, ic_edit: Pencil, ic_more_horiz: MoreHorizontal, ic_more_vert: MoreVertical, ic_notes: BookOpen, ic_pets: PawPrint, ic_progression: ArrowUp, ic_sort: ArrowUpDown, ic_stars: Sparkles, ic_whatshot: Flame };
+const sourceIconEntries = Object.entries(sourceIcons);
 function size(value: unknown, fallback = 0) {
   return typeof value === 'number' && Number.isFinite(value) ? Math.min(800, Math.max(0, value)) : fallback;
 }
@@ -109,11 +96,19 @@ function align(value: unknown): 'flex-start' | 'center' | 'flex-end' {
 /** Extensible view registry. Unknown types produce a marker, not an invented UI. */
 export const rendererRegistry = new Map<string, Renderer>([
   ['icon', v => {
-    const entry = Object.entries(sourceIcons).find(([name]) => name === v.name);
+    const entry = sourceIconEntries.find(([name]) => name === v.name);
     if (!entry) throw new Error(`${it.unsupported}: ${String(v.name)}`);
     const Icon = entry[1];
     return <Icon aria-hidden="true" size={v.size === 'small' ? 18 : v.size === 'large' ? 32 : 24} color={sourceColor(v.color)} />;
   }],
+  ['collapsible', (v, ctx, e) => <SourceCollapsible node={v} context={ctx} evaluate={e} />],
+  ['viewPager', (v, ctx, e) => <SourceViewPager node={v} context={ctx} evaluate={e} />],
+  ['ticker', (v, ctx, e) => <SourceTicker node={v} context={ctx} evaluate={e} />],
+  ['button', (v, ctx, e) => <SourceButton node={v} context={ctx} evaluate={e} />],
+  ['select', (v, ctx, e) => <SourceSelect node={v} context={ctx} evaluate={e} />],
+  ['menuButton', (v, ctx, e) => <SourceMenuButton node={v} context={ctx} evaluate={e} />],
+  ['resource', (v, ctx) => <SourceResourceView node={v} context={ctx} />],
+  ['resourceArray', (v, ctx) => <SourceResourceArray node={v} context={ctx} />],
   ['avatarSection', (v, ctx, e) => <section className="source-avatar-section">
     <div className="source-avatar-center">{children(v.center_content, ctx)}</div>
     <div className="source-avatar-stacks"><div>{children(v.bottom_left_stack ?? [], ctx)}</div><div>{children(v.bottom_right_stack ?? [], ctx)}</div></div>
@@ -201,13 +196,35 @@ export const rendererRegistry = new Map<string, Renderer>([
       onChange={event => saveInput(v, ctx, stat.id, event.target.checked)} />{v.label ? textValue(e(v.label)) : stat.name}</label>;
   }]
 ]);
-/** Safely render one node and its children; evaluation failures remain visible. */
-export function RenderView({ input, context }: { input: unknown; context: RenderContext }) {
+interface ViewProps { input: unknown; context: RenderContext }
+/** Catch deferred React child failures too; retry when inputs or their snapshot change. */
+class ViewErrorBoundary extends Component<ViewProps & { children: ReactNode }, ViewProps & { error: string | null }> {
+  state: ViewProps & { error: string | null } = { input: this.props.input, context: this.props.context, error: null };
+  static getDerivedStateFromError(error: unknown) {
+    return { error: error instanceof Error ? error.message : String(error) };
+  }
+  static getDerivedStateFromProps(props: ViewProps, state: ViewProps) {
+    return props.input !== state.input || props.context !== state.context
+      ? { input: props.input, context: props.context, error: null } : null;
+  }
+  render() {
+    return this.state.error !== null
+      ? <div role="status" data-view-error className="unsupported"><p>{it.viewUnavailable}</p>{this.state.error}</div>
+      : this.props.children;
+  }
+}
+/** Safely render one node and its React descendants; failures stay local and visible. */
+export function RenderView(props: ViewProps) {
+  return <ViewErrorBoundary input={props.input} context={props.context}><ViewContent {...props} /></ViewErrorBoundary>;
+}
+function ViewContent({ input, context }: ViewProps) {
+  // `$edit_mode` is true only inside a real draft session, never during sheet rendering.
+  const environment: RenderContext = { ...context, variables: { $edit_mode: context.drafts !== undefined, ...context.variables } };
   try {
     const v = view(input);
     const options = unsupportedViewOptions(v);
     if (options.length) throw new Error(`${it.unsupported}: ${options.join(', ')}`);
-    const e = createEvaluator(context.stats, context.values, undefined, context).evaluate;
+    const e = createEvaluator(environment.stats, environment.values, undefined, environment).evaluate;
     if (v.is_visible != null) {
       const visible = e(formula(v.is_visible));
       if (typeof visible !== 'boolean') throw new Error('is_visible deve restituire bool');
@@ -216,14 +233,14 @@ export function RenderView({ input, context }: { input: unknown; context: Render
     const handler = rendererRegistry.get(v.type);
     if (!handler) return <div className="unsupported"><strong>{it.unsupported}: {v.type}</strong><small>{v.id}</small></div>;
     if (v.validation_message != null && !context.drafts && context.onChange)
-      return <DeferredResourceSelect node={v} context={context} />;
-    const ignored = Object.keys(v).filter(k => !['id', 'type', 'is_visible', 'validation_message', 'margin_left', 'margin_right', 'margin_top', 'margin_bottom', ...viewFields[v.type]].includes(k));
+      return <DeferredResourceSelect node={v} context={environment} />;
+    const ignored = Object.keys(v).filter(k => v[k] != null && !['id', 'type', 'is_visible', 'validation_message', 'margin_left', 'margin_right', 'margin_top', 'margin_bottom', ...viewFields[v.type]].includes(k));
     const style: CSSProperties = {
       marginLeft: size(v.margin_left), marginRight: size(v.margin_right),
       marginTop: size(v.margin_top), marginBottom: size(v.margin_bottom)
     };
     return <div className="view-wrapper" style={style}>
-      {handler(v, context, e)}
+      {handler(v, environment, e)}
       {context.validationErrors?.[v.id] && <p role="alert" className="error-text">{context.validationErrors[v.id]}</p>}
       {v.validation_message != null && !context.drafts && <small className="unsupported-note">{it.validationRequiresForm}</small>}
       {ignored.length > 0 && <small className="unsupported-note">{it.unsupported}: {ignored.join(', ')}</small>}

@@ -1,137 +1,65 @@
-# Agent instructions
+# Repository Guidelines
 
-## Project
+## Required reading
 
-SheetCore is a responsive, local-first RPG companion PWA, not a landing page or
-JSON editor. Use the existing React, strict TypeScript, Vite, Tailwind, Dexie,
-Zustand, Workbox, Vitest, React Testing Library and Playwright stack.
-Do not add a backend, accounts, analytics or required cloud services.
+Read [the detailed agent instructions](docs/AGENT_INSTRUCTIONS.md) and
+[CONTRIBUTING.md](CONTRIBUTING.md) before changing this repository. Their
+requirements remain mandatory. Read the relevant architecture, compatibility,
+combat, verification, deployment, provenance and threat-model documents listed
+there. More specific directory instructions take precedence.
 
-Read `CONTRIBUTING.md` and the relevant documents before changing behavior:
+## Project structure
 
-- `docs/ARCHITECTURE.md`: ownership, persistence and safety limits.
-- `docs/COMPATIBILITY.md`: verified source contracts and unsupported features.
-- `docs/COMBAT.md`: encounter commands and initializer restrictions.
-- `docs/VERIFICATION.md`: executed checks, not promises.
-- `docs/CI_CD.md`: GitHub Actions and Pages deployment.
-- `NOTICE.md`: source provenance and redistribution restrictions.
-- `.factory/threat-model.md`: trust boundaries and accepted security risks.
+PolySheet is a local-first RPG companion PWA built with React, strict TypeScript,
+Vite, Tailwind and Workbox. Do not add a backend, accounts or analytics.
 
-More specific directory instructions take precedence within their scope.
+- `src/domain/`: contracts and validation.
+- `src/engine/`: React-independent formulas and view sessions.
+- `src/importing/`: source parsing and compatibility diagnostics.
+- `src/persistence/`: Dexie storage, transactions and backups.
+- `src/ui/`: notebook-style controls and Italian copy in `it.ts`.
+- `tests/`: Vitest tests; `tests/e2e/`: Playwright acceptance tests.
+- `public/`: static assets; `scripts/`: fixture and asset tooling.
+- `.reference/`: gitignored external fixtures; `dist/`: generated production build.
 
-## Language and implementation
+## Development and validation
 
-- Write documentation, identifiers and JSDoc/TSDoc in English.
-- Keep application UI copy Italian, centralized in `src/ui/it.ts`. Preserve
-  imported labels in their original language.
-- Match the existing notebook-style UI, CSS tokens, accessible controls and
-  responsive layout. Do not introduce a second design system.
-- Keep rule evaluation independent of React. Use the existing formula/view
-  registries, domain validators and persistence operations.
-- Zustand holds ephemeral UI state; Dexie owns persistent domain data.
-- Prefer existing helpers and dependencies. Do not add a package for a small
-  operation supported by the platform.
-- Document public and safety-sensitive contracts, especially validation,
-  ownership, limits and failure behavior. Do not add explanatory noise.
+Use Node.js 22.12+ or 24 LTS and npm. Run commands from the repository root:
 
-## Source integrity and compatibility
-
-- Preserve exact imported JSON text, including a BOM, and exact compressed
-  `.rpg` bytes. Do not reserialize or recompress originals for export.
-- Imports are immutable, identified by source ID/version and exact-upload hash.
-  Never overwrite a version or silently migrate existing characters.
-- Distinguish monolithic system JSON, split authoring sources, RPGScript,
-  compiled distributions, resource archives and SheetCore internal backups.
-  Supporting one does not establish support for the others.
-- Before implementing a rule, inspect its documentation and a pinned real
-  example. Record the source revision, exact path, semantics, uncertainties
-  and independently expected results in `docs/COMPATIBILITY.md`.
-- Do not invent RPG rules, coerce invalid source constants, replace real
-  calculations with convenient defaults or simulate unsupported effects.
-- Implement a field's behavior before accepting it as supported. Merely adding
-  a registry entry, allowlist key or context name is not an implementation.
-- Keep unknown/unsupported behavior visible. Do not silence warnings, relabel a
-  partial system as complete or weaken validation to make an import pass.
-- The diagnostics UI displays only the first 100 entries. Inspect the complete
-  diagnostic array when investigating a report; the visible list is not the
-  entire compatibility surface.
-- `$view` must reflect real scoped input drafts, validation and save/cancel
-  behavior. An empty placeholder or a copy of committed character values is
-  not a substitute for an implemented view session.
-- Preserve lambda/resource scope isolation, optional-path semantics, cache
-  correctness and shared evaluation budgets when extending formulas.
-- Do not roll dice or run initialization during rendering, reopening or restore.
-  Combat initialization runs only through an explicit atomic command.
-
-## Persistence and safety
-
-- Preserve user changes, imported systems, characters and local browser data.
-  Never clear storage, reset a database or remove files to make a test pass.
-- Validate at untrusted boundaries. Retain byte, decompression, node, depth,
-  collection, image and evaluation limits. Do not raise limits to hide failures.
-- Never execute imported JavaScript, use `eval`/`new Function`, render raw imported
-  HTML or expose object prototypes through stat paths.
-- Keep remote image URLs inert. Local photos use bounded PNG/JPEG validation.
-- Resource references must resolve to the correct type and exact system import.
-  Notebook links are separate metadata and do not equip items or apply effects.
-- Character/combat field commands must patch the latest persisted record.
-  Use Dexie transactions for related writes and preserve unrelated concurrent edits.
-- Validate an entire backup before replacement. A failed command or restore
-  must leave existing data unchanged. Preserve supported legacy backup readers.
-- Keep secrets and user-generated data out of source, logs, screenshots intended
-  for publication and remote requests.
-- Keep external fixtures under gitignored `.reference/`. Do not bundle them in
-  `src/`, `public/`, `dist/` or Git without verified redistribution rights.
-
-## Validation
-
-For application changes, run from the repository root and stop on failures:
-
-```powershell
+```sh
+npm ci
+npm run dev
 npm run check
 npm run build
 npm audit --omit=dev
+PLAYWRIGHT_PORT=4183 PLAYWRIGHT_BASE_PATH=/PolySheet/ npm run test:e2e -- --max-failures=1
 ```
 
-Then test the production build on an isolated port. Leave an existing user
-preview on port 4173 running:
+`check` runs TypeScript and Vitest. Playwright tests the production build on
+desktop and mobile. Stop on failures; preserve any preview on port 4173.
+Also test `/` for routing, asset, worker or deployment changes.
+Documentation-only changes require content, path and diff checks.
 
-```powershell
-$env:PLAYWRIGHT_PORT = '4183'
-$env:PLAYWRIGHT_BASE_PATH = '/SheetCore/'
-npm run test:e2e -- --max-failures=1
-```
+## Coding and testing conventions
 
-Also test `PLAYWRIGHT_BASE_PATH='/'` when changing routing, assets, the worker
-or deployment behavior. PowerShell 5.1 does not support `&&` or `||`; check
-`$LASTEXITCODE` when scripting dependent commands.
+Follow existing two-space indentation, single-quoted TypeScript strings,
+PascalCase components and camelCase functions. No formatter or linter script
+is configured. Write documentation, identifiers and contract comments in English;
+keep UI copy Italian and imported labels unchanged.
 
-- Reproduce each reported symptom before fixing it. Cover its original input
-  and state, not only a simplified replacement fixture.
-- Add regression tests with independent expected results. Test error paths,
-  empty/null inputs, nested scopes, repeated operations and concurrent edits
-  where the change affects them.
-- Test UI changes through actual controls, on desktop and mobile. Verify draft
-  validation, save/cancel, offline reopening and backup restoration as applicable.
-- Wait for the save transaction to finish before testing reload persistence.
-- Real-source tests use local-only pinned fixtures and may explicitly skip on
-  a clean checkout. Report skips; never describe them as verified integrations.
-  Preparation commands are documented in `README.md`.
-- Use `LIVE_RPG_IMPORT=1` only for an intentional live, read-only provider check.
-  Controlled HTTP fixtures do not establish public-host availability or CORS.
-- Run final checks against the delivered code. Update `docs/VERIFICATION.md`
-  honestly; do not copy historical counts as current results.
-- Documentation-only changes need content/path/diff checks, not an unrelated
-  full application test run.
+Dexie owns persistent data; Zustand holds ephemeral UI state. Reuse existing
+registries and helpers. Preserve exact source bytes, validation limits and user
+data. Never execute imported code or simulate unsupported rules.
 
-## Git and delivery
+Use `*.test.ts` or `*.test.tsx` with Vitest and React Testing Library.
+Reproduce reported bugs with original inputs and add independently expected
+regressions. Report skipped external fixtures and record executed checks in
+`docs/VERIFICATION.md`.
 
-- Inspect status and diffs before editing and before committing.
-- Commit or push only when requested for the current work. Use the configured
-  Git identity; never override it, force-push or bypass hooks.
-- Review staged files for unrelated work, secrets, generated artifacts and
-  third-party content. Keep `.reference/`, `dist/` and test output untracked.
-- Publish only `dist/` through the configured gated workflow. Do not change
-  remote settings or claim deployment success without authorization and evidence.
-- Report what changed, which checks passed or failed, and relevant remaining
-  limitations. Do not claim full RPG-system compatibility from successful parsing.
+## Commits and pull requests
+
+Inspect status and diffs; preserve unrelated work. Commit or push only when
+requested. Prefer short imperative subjects, using existing `feat:` style when
+appropriate. Describe scope, compatibility limits and checks in PRs; include
+screenshots for UI changes and link relevant issues. Never commit secrets,
+external fixtures or generated test/build output.

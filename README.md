@@ -1,4 +1,4 @@
-# SheetCore
+# PolySheet
 
 A responsive, installable, local-first character notebook for a **declared subset**
 of RPG Companion JSON system definitions. React + strict TypeScript, Vite,
@@ -216,7 +216,7 @@ npm run test:e2e -- --grep 'direct raw .rpg'
 Remove-Item Env:LIVE_RPG_IMPORT
 ```
 
-Backups now export **SheetCore v3**, retaining original gzip bytes and encounters.
+Backups now export **PolySheet v3**, retaining original gzip bytes and encounters.
 Restore accepts previous **v1** JSON-only and **v2** backups. Older app versions cannot restore v3;
 no existing database or character is migrated to a different import.
 
@@ -227,7 +227,7 @@ no existing database or character is migrated to a different import.
 - **C:** RPGScript `.rpgs` is not compiled or executed.
 - **D:** Only the verified gzip-JSON system `.rpg` variant is decoded.
   This is not a general binary decoder, resource-archive reader or compiler.
-- **E:** SheetCore characters, local resource records, preferences and backups
+- **E:** PolySheet characters, local resource records, preferences and backups
   use an **internal format**, not an RPG Companion character export format.
 - No official character-creation pages, general lifecycle/event/mechanic engine,
   progression, enumerated selectors, general modifier/override
@@ -271,7 +271,7 @@ worker script indefinitely.
 The [CI and Pages workflow](.github/workflows/ci-pages.yml) checks pull requests,
 pushes to `main`, and manual runs. It installs locked dependencies, audits runtime
 dependencies, checks types, runs tests, builds the PWA, and tests desktop/mobile
-under `/SheetCore/`, including offline and exact `.rpg` backup/export.
+under `/PolySheet/`, including offline and exact `.rpg` backup/export.
 
 Only a successful push or manual run **on `main`** can publish `dist/` to Pages.
 Pull requests and manual runs on other branches never deploy. Enable

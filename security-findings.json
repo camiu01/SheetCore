@@ -1,5 +1,5 @@
 {
-  "scan_id": "scan-2026-11-13-sheetcore-views-github",
+  "scan_id": "scan-2026-11-13-polysheet-views-github",
   "scan_type": "working",
   "commit_range": "0d441208f61c2b2690e3326a141d4d0e0dc1acb6..working-tree",
   "pr_number": null,
@@ -33,7 +33,7 @@
   },
   "scan_date": "2026-11-13T17:07:36.482Z",
   "previous_scan": {
-    "scan_id": "scan-2026-11-13-sheetcore-initial",
+    "scan_id": "scan-2026-11-13-polysheet-initial",
     "scan_date": "2026-11-13T15:51:59.809Z",
     "scan_type": "working",
     "commit_range": "d806701..working-tree",

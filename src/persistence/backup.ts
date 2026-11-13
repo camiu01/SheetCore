@@ -1,5 +1,5 @@
 /**
- * @file SheetCore backup v3; reads legacy v1/v2 without changing source identities.
+ * @file PolySheet backup v3; reads legacy v1/v2 without changing source identities.
  * @remarks Source imports are revalidated and rehashed before any data is changed.
  */
 import { z } from 'zod';
@@ -14,7 +14,9 @@ const record = z.record(z.string(), z.unknown());
 const id = z.string().min(1).max(500);
 const date = z.string().datetime();
 const schema = z.object({
-  format: z.literal('sheetcore-backup'), version: z.union([z.literal(1), z.literal(2), z.literal(3)]), exportedAt: date,
+  // The original format tag stays readable so backups exported before the rename still restore.
+  format: z.union([z.literal('polysheet-backup'), z.literal('sheetcore-backup')]),
+  version: z.union([z.literal(1), z.literal(2), z.literal(3)]), exportedAt: date,
   systems: z.array(z.object({
     key: id, original: z.string(), source: z.string().max(2000), digest: id, importedAt: date,
     artifact: z.object({ format: z.literal('gzip-json'), base64: z.string().max(Math.ceil(8 * 1024 * 1024 / 3) * 4) }).strict().optional()
@@ -51,7 +53,7 @@ const schema = z.object({
 /** Export all tables from one read transaction for a coherent snapshot. */
 export async function exportBackup(database = db) {
   const text = await database.transaction('r', [database.systems, database.characters, database.resources, database.rolls, database.preferences, database.combats], async () => JSON.stringify({
-    format: 'sheetcore-backup', version: 3, exportedAt: new Date().toISOString(),
+    format: 'polysheet-backup', version: 3, exportedAt: new Date().toISOString(),
     systems: (await database.systems.toArray()).map(({ key, original, artifact, source, digest, importedAt }) => ({ key, original, artifact, source, digest, importedAt })),
     characters: await database.characters.toArray(),
     resources: await database.resources.toArray(), rolls: await database.rolls.toArray(),

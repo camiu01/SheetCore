@@ -56,7 +56,7 @@ systems/5e/resource_instances/
 The docs distinguish root resource **instances** from resource **definitions**
 under `system/resources/`. Split composition is recursive, lexicographically
 ordered, with documented deep merge, array concatenation, and selected ID merge.
-SheetCore does **not** reconstruct this pipeline from filename guesses.
+PolySheet does **not** reconstruct this pipeline from filename guesses.
 
 | Tool | Actual dependencies and behavior | Reuse decision |
 | --- | --- | --- |
@@ -87,11 +87,11 @@ documentation was inspected on 2026-11-13; real-source checks use pinned derpsy
 | B | Split JSON/RPGScript authoring directory | Not supported; obtain composed JSON using verified official tooling |
 | C | `.rpgs` authoring language, macros and imports | Not supported; no partial compiler |
 | D | Compiled `.rpg` package | Only the verified gzip-JSON system envelope; unknown binary variants, indexes and resource archives rejected |
-| E | SheetCore records and `sheetcore-backup` v3, legacy v1/v2 restore | Supported, internal only, not interchangeable with A–D |
+| E | PolySheet records and `polysheet-backup` v3, legacy v1/v2 restore | Supported, internal only, not interchangeable with A–D |
 
 Python scripts inspect some `.rpg` files as gzip JSON, while the public dev-tool
 page calls `.rpg` binary. This is evidence about those specific tool paths, not
-a universal package specification. SheetCore does not infer a general decoder.
+a universal package specification. PolySheet does not infer a general decoder.
 
 ### User-provided Archer distribution evidence
 
@@ -186,7 +186,7 @@ The real file uses resource-valued stats, nested/nullable paths, contextual
 variables, enumeration formulas, collections, roll events, creation effects,
 mechanics, progression, rich views, and other unsupported formulas. Its creation
 pages contain `post_edit`, `on_page_open`, and `on_page_close` hooks. Those hooks
-are **not** run. Stat view `on_tap_event` requests `rollStat`; SheetCore does not
+are **not** run. Stat view `on_tap_event` requests `rollStat`; PolySheet does not
 replace that mechanic with a guessed dice roll. The selected slice has no image
 files or image URLs; the full definition includes a nullable `photo` stat.
 Local photo editing/rendering is now supported under the limits below; remote
@@ -286,6 +286,31 @@ variants are not silently rendered as defaults.
 
 See [the precise supported options and remaining limits](VIEWS.md).
 
+## Container, selector and counter view increment
+
+The same derpsy `5e` `0.6.0` document supplies these decoded paths. Semantics
+come from the public per-view pages and their enumerated-type pages; any
+uncertainty is resolved conservatively and stays visible.
+
+| Original path | Implemented contract and independent expected result |
+| --- | --- |
+| `character_sheet_sections[9].view.content[0]` (`class_features_subsection`) | [resourceArray](https://docs.rpg-companion.app/Views/resourceArray): display the referenced class instances with their own display view and hidden content line; no create control in `display` mode |
+| `character_creation_flow[0].view.subviews[3]` (classes editor) | `edit` mode lists the referenced instances, offers create/remove and keeps the source validation formula active through the real draft session |
+| `character_creation_flow[0].view.subviews[2].subviews[2]` (`edit_character_basics_subrace_select`) | [select](https://docs.rpg-companion.app/Views/select): local `resource_options` with `options_display_stat` `name`; one stored id per single select |
+| `character_creation_flow[0].view.subviews[4].subviews[1]` (`edit_character_basics_hit_point_mode_select`) | [select](https://docs.rpg-companion.app/Views/select): enumerated `options` (`hit_point_modes`) with inherited entries and `allowed_options`; the chosen entry id is stored |
+| `character_creation_flow[0].view.subviews[2].subviews[0].pop_up_view` (`edit_character_basics_see_race_bottom_sheet`) | [resource](https://docs.rpg-companion.app/Views/resource): render the referenced race through its declared display view; `create_if_empty` is reported, not executed |
+| `character_sheet_sections[4].view.header[1]` (`status_hp`) | [ticker](https://docs.rpg-companion.app/Views/ticker): `plusMinus` buttons change the base `current_hp`, clamped at `min_value_allowed` 0; a direct edit below that minimum shows an error and saves nothing |
+| `character_sheet_sections[0].view.bottom_right_stack[0]` (`lifecycle_events_button`) | [menuButton](https://docs.rpg-companion.app/Views/menuButton): icon and enumeration entries render; choosing one shows the unexecuted event instead of inventing an action |
+| `resources[1].display_view.subviews[6]` (`armor_display_effects_collapsible`) | [collapsible](https://docs.rpg-companion.app/Views/collapsible): source title/subtitle, start-expanded state and nested content; visibility uses the real source formula |
+| `resources[3].edit_view`, `resources[4].edit_view`, `resources[27].edit_view` | [viewPager](https://docs.rpg-companion.app/Views/viewPager): one page at a time with the source page names and constant color |
+| `resources[1].display_view.subviews[7].subviews[0]` (`armor_display_attune_button`) | [button](https://docs.rpg-companion.app/Views/button): source text renders; the declared `event` is never executed and the control stays disabled with a visible note |
+
+`ticker` visibility formulas that reference `$edit_mode` resolve to `true` only
+inside a real draft session. A plain sheet keeps them hidden instead of exposing
+an editor that would persist immediately. `button`/`menuButton` events, filter
+maps, `create_if_empty` and the `diffText` view remain unsupported and diagnosed;
+no source event is treated as a successful no-op.
+
 ## Explicit reduced external fixture
 
 `externalSlice()` selects unchanged source objects:
@@ -296,7 +321,7 @@ See [the precise supported options and remaining limits](VIEWS.md).
 - `character_sheet_sections[5]`: `abilities`, including original header and events.
 - `resources[39]`: `note`, including original stats and views.
 
-Root ID/name are relabelled to `5e-sheetcore-slice` / `5e · verified ability slice`.
+Root ID/name are relabelled to `5e-polysheet-slice` / `5e · verified ability slice`.
 Unrelated character stats, sheet sections and resource definitions are removed.
 Creation flow, mechanics, progression and enumerations are explicitly emptied;
 indexed stats are reduced to `name`. Unknown root metadata and the original
@@ -356,6 +381,7 @@ exact path is specified.
 | [text](https://docs.rpg-companion.app/Views/text) | `character_sheet_sections[5].view.header[1]`, `resources[39].display_view.subviews[0]` | Plain text/scalar editing, scoped validation, signs/clamp/colors and pinned local resource-ID display; no HTML/Markdown | renderer + view-session + browser |
 | [list](https://docs.rpg-companion.app/Views/list), [composite](https://docs.rpg-companion.app/Views/composite), [checkbox](https://docs.rpg-companion.app/Views/checkbox) | `resources[39].display_view` (list), `character_search_item_view` (composite), `character_sheet_sections[2].view.header[3].pop_up_view.content[0]` (checkbox) | Source order/layout/padding, scalar checkbox drafts and original popup Save/Cancel; unsupported options remain diagnosed | renderer + view-session + original browser acceptance |
 | Interactive/resource views | Original notes, condition popup/chips, avatar and section icons | Registered subset above and in VIEWS.md; unknown types/events still have visible fallbacks, not invented actions | renderer + view-session + original browser acceptance |
+| [collapsible](https://docs.rpg-companion.app/Views/collapsible), [viewPager](https://docs.rpg-companion.app/Views/viewPager), [ticker](https://docs.rpg-companion.app/Views/ticker), [button](https://docs.rpg-companion.app/Views/button), [select](https://docs.rpg-companion.app/Views/select), [menuButton](https://docs.rpg-companion.app/Views/menuButton), [resource](https://docs.rpg-companion.app/Views/resource), [resourceArray](https://docs.rpg-companion.app/Views/resourceArray) | `character_sheet_sections[9].view.content[0]`, `resources[3].edit_view`, `character_sheet_sections[4].view.header[1]`, `resources[1].display_view.subviews[7].subviews[0]`, `character_creation_flow[0].view.subviews[4].subviews[1]`, `character_sheet_sections[0].view.bottom_right_stack[0]`, `character_creation_flow[0].view.subviews[2].subviews[0].pop_up_view`, `character_creation_flow[0].view.subviews[3]` | Tested subset: accordion/pager state, bounded ticker edits, enumeration and local-resource options, resource display/edit/list and array create/remove. Button and menu events, `create_if_empty`, filter maps and `diffText` stay unsupported and diagnosed | `source-views.test.tsx` + renderer + view-session |
 | [Resource](https://docs.rpg-companion.app/System/Resource) | `resources[39]` | Definitions, typed manual base editing and safe display view; notebook links distinct from typed references; no general effects or RPG resource export/import | persistence + capabilities + E2E |
 | [CharacterCreationPage](https://docs.rpg-companion.app/System/CharacterCreationPage) | `character_creation_flow[0..3]`; current `systems/5e/system/character_creation_flow/01_item_1.rpgs` | Not supported; explicit separate manual creator | import diagnostics + browser manual-creation assertion |
 | [Mechanic](https://docs.rpg-companion.app/Mechanic/), [Effect](https://docs.rpg-companion.app/Effects/Effect) | `mechanics[]`; stat-view `on_tap_event` | General dispatch/stacking/reversal unsupported. Only explicit combat instance `on_create` synchronous sequence and one `setStat/set` per direct target execute atomically | import + renderer + combat tests |
@@ -363,7 +389,107 @@ exact path is specified.
 | [Split composition](https://docs.rpg-companion.app/GettingStarted/SystemCreation) | Current `systems/5e/system/` | Not supported; no folder/archive import or guessed merge | file format rejection |
 | [RPGScript/dev tool](https://docs.rpg-companion.app/GettingStarted/DeveloperTools/RPGScript) | Current `systems/5e/system/character_stats.rpgs` and `_stdlib/*.rpgs` | Not supported in browser; no partial compiler, external tool code not reused | documented input restriction |
 | Distribution and `.rpg` | Supplied Archer and derpsy `5e/system.rpg` pinned blobs | Partial: native gzip-JSON **system** decoding only; exact original-file hash/export; 8 MiB raw/expanded limits. No repository crawling, resource-pack import, guessed framing or generic binary support | package regressions, both real files, offline/backup E2E and separate live Raw URL check |
-| Internal local storage and backup | No upstream example: deliberately SheetCore-specific | IndexedDB schema v3, backup v3 with gzip originals/encounters, legacy v1/v2 restore, atomic validated replacement, offline shell/content | persistence/migration/package/capabilities + desktop/mobile E2E |
+| Internal local storage and backup | No upstream example: deliberately PolySheet-specific | IndexedDB schema v3, backup v3 with gzip originals/encounters, legacy v1/v2 restore, atomic validated replacement, offline shell/content | persistence/migration/package/capabilities + desktop/mobile E2E |
+
+## Reported empty-class HP failure
+
+The user-supplied `system.rpg` declares system `5e`, version `0.6.0`, with
+exact-upload SHA-256
+`629daf13b73eb11fc898077418ee2440ccdc75c12e59720c074780cb99e1ed9c`.
+Its upstream revision was not independently established; version equality alone
+does not identify a pinned repository blob.
+
+Manual defaults set `classes` to `[]` (`$.character_stats[29]`) and `base_hp`
+to 1 (`$.character_stats[10]`). The original `level` formula
+(`$.character_stats[143]`) sums class levels, producing 0 for this state.
+`classes_hp_mods` (`$.character_stats[14]`) contains an inner `max(map(classes))`
+at `$.character_stats[14].components.components.components[1].components.components[1]`.
+With no classes, that inner maximum receives `[]`. Its enclosing `max(0, ...)`
+cannot protect it because evaluating the second operand already fails.
+`max_hp` (`$.character_stats[12]`) propagates the error.
+
+The public [max contract](https://docs.rpg-companion.app/Stat/Formulas/max)
+explicitly requires a nonempty numeric list. The independently expected result
+is therefore an evaluation failure, not 0 or the base HP. This was reproduced
+against the exact uploaded file with original manual defaults, including repeated
+reads and unchanged inputs. No source or evaluator fallback was added.
+
+This is a limitation of opening an incomplete manual character, not a repaired
+character-creation workflow. The initial diagnosis did not verify populated
+classes. The follow-up below verifies one explicit manual path; selecting a
+class is not a guarantee that all downstream formulas are supported.
+
+### Manual class completion and `notNull`
+
+The same exact-upload fixture is retained locally as
+`.reference/reported-system.rpg`; no upstream revision is inferred.
+Its `$.resources[4]` (`class`) source edit form contains duplicate
+`class_edit_base_ac` view IDs, so the scoped form cannot safely open.
+An explicit manual base-field editor must remain available without claiming to
+execute that invalid source form or its validation/events.
+
+Completing the class references also reaches
+`$.resources[4].stats[5].components.clauses[0].condition.components.components[0]`
+(`actual_hp_modifiers`), which uses
+[`notNull`](https://docs.rpg-companion.app/Stat/Formulas/notNull).
+The public contract defines this as exactly `not(isNull(value))`: only null
+returns false; 0, false, empty text and an empty array return true. Missing
+operands and unsupported nested formulas must still fail.
+
+Independent expected values for a manually entered class with the source
+default `hp_modifiers=["constitution"]`, no archetypes, class level 2,
+character Constitution 14 and base HP 10 are: level 2, Constitution modifier 2,
+class HP modifier 4 and maximum HP 14. No class content, die roll or HP
+progression is inferred. This does not establish general creation compatibility.
+
+`tests/resource-editor.test.tsx` verifies the unmodified original formulas,
+manual resource controls, local error isolation and recovery. The production
+Playwright case additionally verifies actual `Classes` assignment, maximum HP
+14, offline reopening, backup replacement and retained original compressed
+bytes on desktop/mobile. These cases skip explicitly without the local fixture.
+Independent MIT regressions always run for `notNull`, child-render recovery,
+cancelled drafts, failed-reference rollback and concurrent resource edits.
+
+The formula evaluator and import validator now implement `notNull`. The
+nonempty `max` contract is unchanged. View errors, including errors thrown by
+deferred React children such as `ticker`, stay visible inside a local boundary
+instead of taking down the app shell. Manual resource editing is explicitly
+available when the original form fails; source form validation is not bypassed
+silently or advertised as supported.
+
+### Reported AC, description and avatar menu diagnostics
+
+The same exact-upload fixture reproduces
+`armor_class: classes_ac: max richiede una lista non vuota` with `classes=[]`.
+`$.character_stats[146].components` takes the maximum of class AC values;
+`$.character_stats[144]` consumes it. No fallback for an empty maximum is
+introduced. The description at `$.character_stats[28].components` ultimately
+requires `race.name`; the default `race=null` at `[31]` cannot supply it.
+
+With explicit local class, class-details and race records, class level 2,
+Dexterity 14, default source base AC 10 and AC modifier `dexterity`, both
+`classes_ac` and `race_ac` independently equal 12, so `armor_class` equals 12
+without equipped armor or a shield. Manually naming the records `Manual class`
+and `Manual race` yields description `Manual race Manual class 2`. Unit and
+desktop/mobile production tests exercise this recovery without changing source
+formulas. Browser tests retain AC and description offline and after backup
+replacement, alongside the previously verified HP 14.
+
+The original avatar menu at
+`$.character_sheet_sections[0].view.bottom_right_stack[0]` already renders
+`lifecycle_events_menu` in the current renderer. The original status section's
+`$edit_mode` conditions also resolve without a missing-stat error. These two
+reported errors were not reproduced on the current code. Selecting `Long rest`
+still reports an unexecuted event, not a completed rest.
+
+The original serialized `bottom_right_button_event=null` no longer creates a
+runtime unsupported-field note. Null-valued optional view fields are absent for
+that runtime note only; stored source and conservative import diagnostics remain
+unchanged. The non-null `bottom_left_button_event` (`show_information`) remains
+visibly unsupported. On mobile, the right-corner menu previously extended beyond
+the viewport and could not be selected by pointer. It now aligns its right edge
+with its trigger. An always-on original MIT browser regression checks bounds and
+pointer selection on desktop/mobile, independently of the external fixture.
 
 ## Verification and extension gates
 

@@ -29,6 +29,14 @@ it('makes unsupported events visible while preserving supported stat display', (
   expect(screen.getByTestId('stat-vigore')).toHaveTextContent('2');
   expect(screen.getByText('Non supportato: on_tap_event')).toBeInTheDocument();
 });
+it('does not report absent serialized avatar events as unsupported', () => {
+  const input = { id: 'avatar', type: 'avatarSection', center_content: [],
+    bottom_left_button_event: { name: 'show_information' }, bottom_right_button_event: null };
+  const { rerender } = render(<RenderView input={input} context={{ stats: [], values: {} }} />);
+  expect(screen.getByText('Non supportato: bottom_left_button_event', { exact: true })).toBeInTheDocument();
+  rerender(<RenderView input={{ ...input, bottom_left_button_event: null }} context={{ stats: [], values: {} }} />);
+  expect(screen.queryByText(/Non supportato/)).not.toBeInTheDocument();
+});
 it('shows evaluation failures instead of crashing the sheet', () => {
   render(<RenderView input={{ id: 'v', type: 'stat', stat: 'missing' }} context={{ stats: [], values: {} }} />);
   expect(screen.getByRole('status')).toHaveTextContent('Statistica mancante');

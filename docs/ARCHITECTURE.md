@@ -19,6 +19,8 @@
 | `src/ui/renderer.tsx` | View registry, safe plain-text rendering, scalar inputs and fallbacks |
 | `src/engine/view-session.ts`, `src/ui/SourceForm.tsx` | Scoped input drafts, source validation, explicit Save/Cancel |
 | `src/ui/SourceViews.tsx`, `src/persistence/views.ts` | Popup/local resource controls and atomic latest-owner patches |
+| `src/ui/SourceLayoutViews.tsx`, `src/ui/SourceValueViews.tsx`, `src/ui/SourceResourceViews.tsx`, `src/ui/view-support.tsx` | Collapsible/pager layout, ticker/button/select/menu controls, `resource`/`resourceArray` bodies and shared safe helpers |
+| `src/engine/enumerations.ts` | Bounded enumerated-type resolution with inheritance and allowlists |
 | `src/ui/store.ts` | Only ephemeral navigation, selection and search, not copies of DB data |
 | `src/ui/it.ts` | Initial Italian UI catalogue |
 | `src/ui/Library.tsx` | Local/HTTPS file import preview and confirmation |
@@ -45,7 +47,7 @@ compressed file. Whitespace-only
 changes are distinct snapshots. Identical imports are idempotent. Version strings
 are identifiers, not upgrade instructions: no automatic source replacement or
 character migration occurs. `min_app_version` is an original-app constraint,
-not a SheetCore minimum version.
+not a PolySheet minimum version.
 
 `Character.values` contains base values only. The evaluator reads that explicit
 snapshot and the immutable definition. Calculated character values are not persisted
@@ -103,8 +105,17 @@ Character, resource and combat form patches reread latest owners inside Dexie
 transactions. Resource creation and assignment commit atomically; append/unlink/
 reorder callbacks operate on latest arrays. Only changed fields are patched.
 Combat forms preserve linked-PC and initializer-override ownership. The manual
-fallback resource editor still stages a whole record when no edit view exists.
+resource editor is also explicitly available when an original edit view cannot
+run. It validates data types and references, not source form rules; switching
+discards only the unsaved source draft after a visible warning. Existing manual
+resource saves merge changed fields into the latest record in a transaction,
+including preservation of concurrent archive-name edits when the name was untouched.
 See [view contracts and limitations](VIEWS.md).
+
+Each rendered source view has a React error boundary as well as synchronous
+evaluation guards. Errors in child components remain visible in that view and
+cannot replace the app shell or unrelated controls. A changed input or context
+snapshot retries the view; no source values are fabricated to make it render.
 
 ## Safety limits
 
@@ -158,7 +169,7 @@ Backup envelope:
 
 ```json
 {
-  "format": "sheetcore-backup",
+  "format": "polysheet-backup",
   "version": 3,
   "exportedAt": "2026-01-01T00:00:00.000Z",
   "systems": [],

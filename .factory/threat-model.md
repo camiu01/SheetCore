@@ -1,11 +1,11 @@
-# Threat Model for SheetCore
+# Threat Model for PolySheet
 
-Last updated: 2026-11-13. Version: 1.2.0. Method: STRIDE.
+Last updated: 2026-11-13. Version: 1.3.0. Method: STRIDE.
 This is a source review, not a penetration-test or compliance certification.
 
 ## 1. System Overview
 
-SheetCore is a static React/TypeScript PWA. It has no backend, account service,
+PolySheet is a static React/TypeScript PWA. It has no backend, account service,
 authentication tokens, shared server database, or automatic cloud synchronization.
 Dexie stores characters, immutable source imports, resources, encounters, rolls
 and preferences in the current browser origin's IndexedDB.
@@ -84,7 +84,7 @@ They are threat scenarios, not assertions of exploitable findings.
 | --- | --- | --- | --- |
 | Imports | S: misleading publisher labels; T: altered originals; R: disputed input; I: token-bearing provenance; D: compression/depth bombs; E: executable payload | Explicit preview/source warning; exact hashes; query-free provenance; bounded streams/parser; no execution | Medium/possible: no publisher signatures or licensing verification |
 | Interpreter | S: forged contextual identity; T: prototype traversal/coercion; R: opaque outcomes; I: unrelated scope access; D: cycles/list growth; E: arbitrary code/effects | Trusted scope objects, own properties, typed references; visible errors; shared budgets/cycle detection; explicit roll capability and initializer allowlists | Medium/possible: partial upstream semantics; large-library performance not certified |
-| Persistence/backup | S: foreign system IDs; T: dangling links/partial restore; R: no audit ledger; I: local data access; D: quota exhaustion; E: computed-field writes | Same-version validation, source rehashing, transaction rollback, base-only patches and constrained initializer overrides | Medium/possible: local profile compromise, eviction, and last-save-wins manual resource forms |
+| Persistence/backup | S: foreign system IDs; T: dangling links/partial restore; R: no audit ledger; I: local data access; D: quota exhaustion; E: computed-field writes | Same-version validation, source rehashing, transaction rollback, latest-record base-only patches and constrained initializer overrides | Medium/possible: local profile compromise, eviction, and last-committed-write wins on the same field |
 | UI/photos | S: source text posing as app text; T: HTML/SVG/script input; R: accidental edits; I: remote image beacons; D: large images; E: event execution | Visible source/support labels; React text; PNG/JPEG-only data URLs; no remote images; confirmations and save indicator; events unsupported | Medium/possible: no encryption or protection against malicious browser extensions; headers depend on host |
 | PWA/host | S: compromised host; T: replaced assets; R: unclear update origin; I: same-origin compromise; D: stale/evicted caches; E: malicious service worker | HTTPS deployment, prompt-based updates, shell-only precache, independent IndexedDB | High/uncommon: host/dependency compromise is outside application input controls; two-version rollout untested |
 | CI/tooling | S: substituted dependencies/actions; T: PR deployment; R: unclear provenance; I: credential/artifact disclosure; D: hostile build tooling; E: excessive token permissions | Lockfile, full action SHA pins, no persisted checkout credentials, read-only verify, dependent deployment gate, dist-only artifact, fixed Git argument arrays | Medium/possible: known development-tool advisories; Actions/Pages hosted run still requires verification |
@@ -138,9 +138,11 @@ automated LLM scanning service or a new enforced CI gate.
   audit is separate. Build trusted application code only.
 - General mechanics/events, external resource archives and complete upstream
   compatibility are not provided. Do not infer them from import success.
-- Manual resource fallback dialogs save a staged record; conflicting edits in
-  another tab can be overwritten. Source edit forms and character/combat commands
-  patch latest records. Same-field updates remain last-committed-write wins.
+- Manual resource editors now patch changed fields against the latest record,
+  as source edit forms and character/combat commands do. Unrelated concurrent
+  fields and untouched archive names are retained. Same-field updates remain
+  last-committed-write wins. The explicit manual editor validates data integrity,
+  not source form rules; the UI warns before discarding an unsaved source draft.
 - Manual creation-field projections do not run group visibility or lifecycle;
   they are not evidence of complete source-rule or creation-flow validity.
 - No security contacts or compliance framework were supplied; none is invented.
@@ -149,6 +151,11 @@ automated LLM scanning service or a new enforced CI gate.
   Only public repository metadata is queried; no local records or tokens are sent.
 
 ## 9. Version Changelog
+
+- 1.3.0 (2026-11-13): Explicit manual resource editing despite invalid source
+  forms, latest-record transactional patches, busy dismissal guards and local
+  React view error boundaries. Formula errors remain visible; no rule fallback,
+  source mutation or new remote boundary was introduced.
 
 - 1.2.0 (2026-11-13): Public GitHub discovery and commit-pinned retrieval;
   bounded untrusted API responses, safe paths, complete-tree checks and

@@ -69,7 +69,7 @@ export function Library({ systems, run }: { systems: StoredSystem[]; run: Run })
       <div className="demo-panel">
         <div className="demo-art" aria-hidden="true"><svg viewBox="0 0 200 140"><path d="M10 123 68 28l30 49 24-38 68 84zM68 28l-7 52 16-10 21 7M122 39l-4 42 13-8 19 20M82 123l17-27 17 27" /></svg></div>
         <p className="eyebrow">{it.original}</p><h2>{it.demoTitle}</h2><p>{it.demoDescription}</p>
-        <button className="button demo-button" onClick={() => void run(() => prepare(demoOriginal, 'SheetCore · contenuto originale MIT'))}>{it.demoAction}<ArrowRight size={17} /></button>
+        <button className="button demo-button" onClick={() => void run(() => prepare(demoOriginal, 'PolySheet · contenuto originale MIT'))}>{it.demoAction}<ArrowRight size={17} /></button>
       </div>
     </div>
     <div className="section-title"><h2>{systems.length ? it.libraryTitle : it.noSystems}</h2><span className="muted">{systems.length} {systems.length === 1 ? it.savedVersion : it.savedVersions}</span></div>

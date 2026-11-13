@@ -97,6 +97,7 @@ function CombatDetail({ system, combat, resources, characters, run }: {
         try { const name = evaluator.get('name'); if (typeof name === 'string' && name) title = name; } catch { /* The source may not declare a name stat. */ }
         const renderContext = { ...context.environment, systemKey: system.key, createdAt: scope.createdAt, stats: scope.stats, values: scope.values,
           overrides: scope.overrides, variables: { ...context.environment.variables, ...scope.variables },
+          enumerations: system.definition.enumerated_types,
           onChange: (statId: string, value: unknown) => execute({ type: 'value', id: f.id, statId, value }),
           onCommit: (patch: ValuePatch, additions?: ResourceInstance[]) => commitCombatView(combat.id, f.id, patch, additions) };
         return <article key={f.id} className={`combatant-card ${current?.id === f.id ? 'combatant-current' : ''}`}>

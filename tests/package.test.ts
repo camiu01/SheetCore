@@ -133,7 +133,7 @@ describe('direct file URL contract', () => {
     expect(imported.artifact).toBeDefined();
     expect(imported.source).toBe('https://raw.githubusercontent.com/owner/repo/main/5e/system.rpg');
     expect(fetch).toHaveBeenCalledWith(expect.any(URL), expect.objectContaining({ credentials: 'omit', referrerPolicy: 'no-referrer', signal: expect.any(AbortSignal) }));
-    expect((await importFromUrl('https://owner.github.io/repo/5e/system.rpg')).definition.id).toBe('sheetcore-sentieri');
+    expect((await importFromUrl('https://owner.github.io/repo/5e/system.rpg')).definition.id).toBe('polysheet-sentieri');
   });
   it('distinguishes HTTP, HTML content types, and disguised HTML bodies', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('<html>Error</html>', { status: 404, headers: { 'content-type': 'text/html' } })));

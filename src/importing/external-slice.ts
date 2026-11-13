@@ -22,7 +22,7 @@ export function externalSlice(source: SystemDefinition): SystemDefinition {
   const resources = source.resources.filter(r => r.id === 'note');
   if (stats.length !== 13 || sections.length !== 1 || resources.length !== 1) throw new Error('Pinned external subset has drifted');
   return {
-    ...source, id: `${source.id}-sheetcore-slice`, name: `${source.name} · verified ability slice`,
+    ...source, id: `${source.id}-polysheet-slice`, name: `${source.name} · verified ability slice`,
     character_stats: stats, character_sheet_sections: sections, resources,
     character_indexed_stats: ['name'], character_creation_flow: [],
     progression_systems: {}, mechanics: [], enumerated_types: []

@@ -11,6 +11,7 @@ export class SheetDatabase extends Dexie {
   rolls!: EntityTable<Roll, 'id'>;
   preferences!: EntityTable<Preferences, 'id'>;
   combats!: EntityTable<Combat, 'id'>;
+  // Storage name is a stable identifier: keeping the original keeps existing local data reachable.
   constructor(name = 'sheetcore') {
     super(name);
     this.version(1).stores({

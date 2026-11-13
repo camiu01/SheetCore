@@ -12,7 +12,7 @@ export function sessionViews(input: unknown): View[] {
     ids.add(node.id); result.push(node);
     for (const field of ['subviews', 'header', 'content', 'center_content', 'bottom_left_stack', 'bottom_right_stack'])
       if (Array.isArray(node[field])) node[field].forEach(v => walk(v, depth + 1));
-    if (node.header_view) walk(node.header_view, depth + 1);
+    for (const field of ['header_view', 'left_view']) if (node[field]) walk(node[field], depth + 1);
   }
   walk(input, 0); return result;
 }
@@ -20,7 +20,7 @@ export function sessionViews(input: unknown): View[] {
 export function inputStat(node: View, stats: Stat[]) {
   const id = node.type === 'avatar' ? node.photo_stat
     : node.type === 'resourceSection' ? node.resource_set_stat ?? node.resource_stat
-    : node.edit_stat ?? (['stat', 'checkbox', 'selectResources'].includes(node.type) ? node.stat : undefined);
+    : node.edit_stat ?? (['stat', 'checkbox', 'selectResources', 'ticker', 'select', 'resource', 'resourceArray'].includes(node.type) ? node.stat : undefined);
   return stats.find(s => s.id === id && s.type === 'base');
 }
 /** Seed only real writable input IDs; subsequent edits stay session-local. */
@@ -33,7 +33,7 @@ export function initialDrafts(input: unknown, stats: Stat[], values: Record<stri
 /** Explicit manual projection: retain input nodes, not official page visibility/hooks. */
 export function manualFieldGroup(group: View): View {
   if (!Array.isArray(group.content)) throw new Error('Gruppo di campi non valido');
-  return { id: `sheetcore-manual-${group.id}`, type: 'list', subviews: group.content, validation_message: group.validation_message };
+  return { id: `polysheet-manual-${group.id}`, type: 'list', subviews: group.content, validation_message: group.validation_message };
 }
 /** Find original calculations whose direct $view dependencies exist in this form. */
 export function draftCalculations(stats: Stat[], drafts: Record<string, unknown>) {

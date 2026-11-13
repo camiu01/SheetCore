@@ -3,7 +3,7 @@ const constant = (value: string | number, value_type = typeof value === 'number'
 const ref = (stat: string) => ({ type: 'stat', stat });
 const statView = (id: string, stat: string) => ({ id, type: 'stat', stat });
 export const demo = {
-  id: 'sheetcore-sentieri', name: 'Sentieri', abbreviation: 'SE', version: '1.0.0',
+  id: 'polysheet-sentieri', name: 'Sentieri', abbreviation: 'SE', version: '1.0.0',
   character_display_name: 'nome',
   character_stats: [
     { id: 'nome', name: 'Nome', type: 'base', value_type: 'string', default_value: '' },

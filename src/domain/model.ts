@@ -1,5 +1,5 @@
 /**
- * @file Source-preserving contracts and SheetCore-owned persistence records.
+ * @file Source-preserving contracts and PolySheet-owned persistence records.
  * @remarks Passthrough schemas retain unknown RPG fields. Character, resource
  * instance, and backup shapes are internal, not RPG Companion exchange formats.
  */
@@ -156,7 +156,7 @@ export function matchesType(value: unknown, type: string, subtype?: string | nul
   if (type === 'photo') return isPhoto(value);
   return false;
 }
-/** SheetCore-owned resource link, deliberately not an upstream instance export. */
+/** PolySheet-owned resource link, deliberately not an upstream instance export. */
 export function isResourceReference(value: unknown): value is { resourceId: string } {
   return !!value && typeof value === 'object' && !Array.isArray(value)
     && Object.keys(value).length === 1 && typeof object(value).resourceId === 'string'

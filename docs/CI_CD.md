@@ -22,7 +22,7 @@ The verification job runs on Ubuntu with Node.js 24:
 5. Build the production PWA with `npm run build`.
 6. Install Chromium and its Linux dependencies using the locked Playwright CLI.
 7. Run `npm run test:e2e -- --max-failures=1`, with desktop and emulated mobile
-   profiles, against the real production preview under `/SheetCore/`. Stop at
+   profiles, against the real production preview under `/PolySheet/`. Stop at
    the first failure rather than exhausting the job timeout on a broken build.
 8. On failure, retain browser traces/screenshots in `browser-failure-evidence`
    for seven days. Files absent because an earlier step failed are ignored.
@@ -91,7 +91,7 @@ To reproduce the Pages subdirectory checks without stopping an existing preview:
 npm run check
 npm run build
 $env:PLAYWRIGHT_PORT = '4183'
-$env:PLAYWRIGHT_BASE_PATH = '/SheetCore/'
+$env:PLAYWRIGHT_BASE_PATH = '/PolySheet/'
 npm run test:e2e
 ```
 

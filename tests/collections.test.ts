@@ -41,6 +41,23 @@ it('uses strict null and string operations without coercion', () => {
   expect(e.evaluate({ type: 'contains', haystack: list(constant({ resourceId: 'a' }, 'resource')), needle: constant({ resourceId: 'a' }, 'resource') })).toBe(true);
 });
 
+it('evaluates notNull without coercion and retains nested failures and lambda scopes', () => {
+  const e = createEvaluator([]);
+  expect(e.evaluate({ type: 'notNull', components: constant(null) })).toBe(false);
+  for (const components of [constant(0), constant(false), constant(''), list()]) {
+    expect(e.evaluate({ type: 'notNull', components })).toBe(true);
+    expect(parseSystem(JSON.stringify({ ...demo, character_stats: [{
+      id: 'present', name: 'Present', type: 'calculated', value_type: 'bool',
+      components: { type: 'notNull', components }
+    }] })).diagnostics.filter(d => d.path.startsWith('$.character_stats'))).toEqual([]);
+  }
+  expect(e.evaluate({ type: 'map', components: list(constant(null), constant(0)),
+    mapper: { type: 'notNull', components: stat('$mapValue') } })).toEqual([false, true]);
+  expect(() => e.get('$mapValue')).toThrow();
+  expect(() => e.evaluate({ type: 'notNull' })).toThrow();
+  expect(() => e.evaluate({ type: 'notNull', components: { type: 'unsupported' } })).toThrow('non supportata');
+});
+
 it('finds the first match lazily, returns null for no match and restores bindings on error', () => {
   const e = createEvaluator([]);
   const find = { type: 'findFirst', components: list(constant(1), constant(3), constant(4)),
@@ -84,7 +101,7 @@ it('diagnoses missing operands, invalid order and nested unsupported expressions
   for (const components of [
     { type: 'sortBy', components: list(), sort_by_selector: constant(1) },
     { type: 'flatMap', components: list() }, { type: 'contains', haystack: list() },
-    { type: 'isNull' }, { type: 'toLowerCase' }, { type: 'findFirst', components: [] }
+    { type: 'isNull' }, { type: 'notNull' }, { type: 'toLowerCase' }, { type: 'findFirst', components: [] }
   ]) expect(parseSystem(JSON.stringify({ ...demo, character_stats: [{
     id: 'test', name: 'Test', type: 'calculated', value_type: 'bool', components
   }] })).diagnostics.some(d => d.severity === 'error')).toBe(true);

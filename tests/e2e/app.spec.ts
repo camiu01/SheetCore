@@ -41,6 +41,111 @@ async function waitForWorker(page: Page) {
   await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
 }
 
+test('reported original HP, AC and description recover with manual class and race resources', async ({ page, context }) => {
+  const file = resolve('.reference/reported-system.rpg');
+  test.skip(!existsSync(file), 'Local-only user-provided HP reproduction fixture is absent');
+  await page.goto('./');
+  await navigate(page, 'Libreria sistemi');
+  await page.locator('input[type=file]').setInputFiles(file);
+  await page.getByRole('button', { name: 'Conferma importazione', exact: true }).click();
+  await expect(page.getByRole('dialog')).not.toBeVisible();
+  await create(page, 'HP manuale');
+  await expect(page.locator('[data-view-error]').filter({ hasText: 'max_hp: classes_hp_mods: max richiede una lista non vuota' }).first()).toBeVisible();
+  await expect(page.locator('[data-view-error]').filter({ hasText: 'armor_class: classes_ac: max richiede una lista non vuota' })).toBeVisible();
+  await expect(page.locator('[data-view-error]').filter({ hasText: 'Statistica mancante nel percorso: race.name' })).toBeVisible();
+  await expect(page.getByText('Statistica mancante: $edit_mode', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Non supportato: menuButton', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Non supportato: bottom_left_button_event', { exact: true })).toBeVisible();
+  await expect(page.getByText(/Non supportato: .*bottom_right_button_event/)).toHaveCount(0);
+  await page.locator('.source-avatar-section').getByRole('button', { name: 'Menu della sorgente', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Long rest', exact: true }).click();
+  await expect(page.getByText(/Evento importato non eseguito da PolySheet.*trigger_long_rest/)).toBeVisible();
+  await navigate(page, 'Risorse');
+  for (const [definitionId, archiveName] of [['class', 'Classe manuale'], ['class_details', 'Dettagli classe manuale'], ['race', 'Razza manuale']]) {
+    await page.getByRole('button', { name: 'Nuova risorsa locale', exact: true }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Tipo di risorsa').selectOption(definitionId);
+    await dialog.getByRole('button', { name: 'Apri editor manuale dei valori base', exact: true }).click();
+    await dialog.getByLabel('Nome nell’archivio').fill(archiveName);
+    if (definitionId !== 'class_details') {
+      await dialog.getByRole('textbox', { name: 'Name', exact: true }).fill(archiveName);
+      await dialog.getByRole('textbox', { name: 'Name', exact: true }).press('Tab');
+    } else {
+      await dialog.getByRole('combobox', { name: 'Class', exact: true }).selectOption({ label: 'Classe manuale · class' });
+      await dialog.getByRole('spinbutton', { name: 'Class level', exact: true }).fill('2');
+      await dialog.getByRole('spinbutton', { name: 'Class level', exact: true }).press('Tab');
+    }
+    await dialog.getByRole('button', { name: 'Salva risorsa', exact: true }).click();
+    await expect(dialog).not.toBeVisible();
+    await expect(page.getByRole('heading', { name: archiveName, exact: true })).toBeVisible();
+  }
+  await navigate(page, 'Personaggi');
+  await page.getByRole('button', { name: /HP manuale/ }).click();
+  const editor = page.locator('details.base-editor').filter({ has: page.locator('summary', { hasText: 'Valori base · modifica manuale' }) });
+  await editor.locator('summary').click();
+  const assignedClass = editor.getByRole('group', { name: 'Classes', exact: true })
+    .getByRole('checkbox', { name: 'Dettagli classe manuale · class_details', exact: true });
+  await assignedClass.click();
+  await expect(assignedClass).toBeChecked();
+  const assignedRace = editor.getByRole('combobox', { name: 'Race', exact: true });
+  await assignedRace.selectOption({ label: 'Razza manuale · race' });
+  await expect(assignedRace).not.toHaveValue('');
+  await editor.getByRole('spinbutton', { name: 'Dexterity', exact: true }).fill('14');
+  await editor.getByRole('spinbutton', { name: 'Dexterity', exact: true }).press('Tab');
+  await editor.getByRole('spinbutton', { name: 'Constitution', exact: true }).fill('14');
+  await editor.getByRole('spinbutton', { name: 'Constitution', exact: true }).press('Tab');
+  await editor.getByRole('spinbutton', { name: 'Base HP', exact: true }).fill('10');
+  await editor.getByRole('spinbutton', { name: 'Base HP', exact: true }).press('Tab');
+  await expect(page.getByText('/ 14 HP', { exact: true })).toBeVisible();
+  await expect(page.getByTestId('stat-armor_class')).toHaveText('12');
+  await expect(page.getByText('Razza manuale Classe manuale 2', { exact: true })).toBeVisible();
+  await expect(page.locator('[data-view-error]').filter({ hasText: /armor_class:|race.name/ })).toHaveCount(0);
+  await expect(page.locator('[data-view-error]').filter({ hasText: 'max_hp: classes_hp_mods:' })).toHaveCount(0);
+  await waitForWorker(page);
+  await context.setOffline(true);
+  await page.reload();
+  await page.getByRole('button', { name: /HP manuale/ }).click();
+  await expect(page.getByText('/ 14 HP', { exact: true })).toBeVisible();
+  await expect(page.getByTestId('stat-armor_class')).toHaveText('12');
+  await expect(page.getByText('Razza manuale Classe manuale 2', { exact: true })).toBeVisible();
+  await navigate(page, 'Impostazioni');
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Esporta backup', exact: true }).click();
+  const backup = readFileSync((await (await download).path())!, 'utf8');
+  const data = JSON.parse(backup);
+  expect(data.resources).toHaveLength(3);
+  expect(data.characters[0].values.classes).toHaveLength(1);
+  expect(Buffer.from(data.systems[0].artifact.base64, 'base64')).toEqual(readFileSync(file));
+  await page.locator('input[type=file]').setInputFiles({ name: 'manual-hp.json', mimeType: 'application/json', buffer: Buffer.from(backup) });
+  await page.getByRole('button', { name: 'Sostituisci archivio', exact: true }).click();
+  await expect(page.getByRole('dialog')).not.toBeVisible();
+  await page.getByRole('button', { name: /HP manuale/ }).click();
+  await expect(page.getByText('/ 14 HP', { exact: true })).toBeVisible();
+  await expect(page.getByTestId('stat-armor_class')).toHaveText('12');
+  await expect(page.getByText('Razza manuale Classe manuale 2', { exact: true })).toBeVisible();
+});
+
+test('avatar corner menu stays inside the viewport and accepts pointer selection', async ({ page }) => {
+  const source = { ...demo,
+    enumerated_types: [{ id: 'local-menu', name: 'Menu locale', types: [{ id: 'rest', name: 'Riposo locale' }] }],
+    character_sheet_sections: [{ id: 'portrait', view: { id: 'portrait-view', type: 'avatarSection',
+      center_content: [], bottom_right_stack: [{ id: 'corner-menu', type: 'menuButton', options: 'local-menu' }]
+    } }]
+  };
+  await page.goto('./');
+  await importJson(page, JSON.stringify(source));
+  await create(page, 'Menu locale');
+  await page.getByRole('button', { name: 'Menu della sorgente', exact: true }).click();
+  const menu = page.getByRole('menu');
+  const bounds = await menu.boundingBox();
+  expect(bounds).not.toBeNull();
+  expect(bounds!.x).toBeGreaterThanOrEqual(0);
+  expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(await page.evaluate(() => window.innerWidth));
+  await page.getByRole('menuitem', { name: 'Riposo locale', exact: true }).click();
+  await expect(menu).not.toBeVisible();
+  await expect(page.getByText(/Evento importato non eseguito da PolySheet.*rest/)).toBeVisible();
+});
+
 test('production assets, manifest and offline worker retain the deployment subpath', async ({ page, context, baseURL }) => {
   if (!baseURL) throw new Error('Production acceptance requires a baseURL');
   const path = new URL(baseURL).pathname;
@@ -291,17 +396,17 @@ test('rejects malformed files and shows unknown components without running scrip
 
 test('URL imports report HTTP and CORS errors and import a permitted JSON response', async ({ page }) => {
   await page.goto('./'); await navigate(page, 'Libreria sistemi');
-  await page.route('https://fixtures.sheetcore.test/missing.json', route => route.fulfill({ status: 404, body: 'Not found', headers: { 'access-control-allow-origin': '*' } }));
+  await page.route('https://fixtures.polysheet.test/missing.json', route => route.fulfill({ status: 404, body: 'Not found', headers: { 'access-control-allow-origin': '*' } }));
   await page.getByRole('button', { name: 'Da URL' }).click();
-  await page.getByLabel('URL del sistema o repository GitHub').fill('https://fixtures.sheetcore.test/missing.json');
+  await page.getByLabel('URL del sistema o repository GitHub').fill('https://fixtures.polysheet.test/missing.json');
   await page.getByRole('button', { name: 'Carica anteprima' }).click();
   await expect(page.getByRole('alert')).toContainText('HTTP 404');
-  await page.route('https://fixtures.sheetcore.test/cors.json', route => route.abort('failed'));
-  await page.getByLabel('URL del sistema o repository GitHub').fill('https://fixtures.sheetcore.test/cors.json');
+  await page.route('https://fixtures.polysheet.test/cors.json', route => route.abort('failed'));
+  await page.getByLabel('URL del sistema o repository GitHub').fill('https://fixtures.polysheet.test/cors.json');
   await page.getByRole('button', { name: 'Carica anteprima' }).click();
   await expect(page.getByRole('alert')).toContainText('CORS');
-  await page.route('https://fixtures.sheetcore.test/system.json', route => route.fulfill({ status: 200, body: demoOriginal, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' } }));
-  await page.getByLabel('URL del sistema o repository GitHub').fill('https://fixtures.sheetcore.test/system.json');
+  await page.route('https://fixtures.polysheet.test/system.json', route => route.fulfill({ status: 200, body: demoOriginal, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' } }));
+  await page.getByLabel('URL del sistema o repository GitHub').fill('https://fixtures.polysheet.test/system.json');
   await page.getByRole('button', { name: 'Carica anteprima' }).click();
   await expect(page.getByRole('dialog', { name: 'Prima di importare' })).toBeVisible();
   await page.getByRole('button', { name: 'Conferma importazione' }).click();

@@ -4,9 +4,9 @@
 
 | Material | Author | Source | License |
 | --- | --- | --- | --- |
-| SheetCore application and documentation | SheetCore contributors | This repository | MIT, `LICENSE.md` |
-| Sentieri example | SheetCore contributors | `src/demo.ts` | MIT |
-| App icon and mountain/monogram artwork | SheetCore contributors | `public/icon.svg`, `scripts/icons.mjs`, UI/CSS | MIT |
+| PolySheet application and documentation | PolySheet contributors | This repository | MIT, `LICENSE.md` |
+| Sentieri example | PolySheet contributors | `src/demo.ts` | MIT |
+| App icon and mountain/monogram artwork | PolySheet contributors | `public/icon.svg`, `scripts/icons.mjs`, UI/CSS | MIT |
 
 No photos, external game rules, copyrighted game descriptions, or remote fonts
 are bundled. Lucide icons are provided through `lucide-react`; retain its ISC
@@ -15,6 +15,11 @@ license and the licenses of other installed dependencies when redistributing.
 does not replace those dependencies' licenses.
 
 ## External, local-only reference material
+
+The user-supplied diagnostic fixture `.reference/reported-system.rpg` remains
+local and gitignored. Its exact-upload hash, declared system version and limits
+are recorded in `docs/COMPATIBILITY.md`; no upstream revision or redistribution
+permission is inferred from that upload.
 
 - Source: [RPG Companion App open systems repository](https://github.com/blastervla/rpg-companion-app-systems).
 - Attributed author: **Blastervla Enterprises**.
@@ -42,11 +47,11 @@ Its README and public documentation instead state
 README additionally calls scripts/tools MIT without a corresponding full MIT
 grant in `LICENSE.md`.
 
-SheetCore does **not** decide that one statement supersedes another. No external
+PolySheet does **not** decide that one statement supersedes another. No external
 creative content or tool code is distributed. Before redistributing any local
 fixture, subset, game text, tool, or image, resolve the applicable license and
 any underlying third-party rights with the rights holder. In particular, do not
-include these fixtures in a commercial distribution under SheetCore's MIT
+include these fixtures in a commercial distribution under PolySheet's MIT
 license. Keep the source attribution and applicable conditions with any
 authorized redistribution.
 

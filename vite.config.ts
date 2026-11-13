@@ -11,8 +11,8 @@ export default defineConfig({
       registerType: 'prompt',
       includeAssets: ['icon.svg', 'icon-192.png', 'icon-512.png'],
       manifest: {
-        name: 'SheetCore | Il tuo tavolo, ovunque',
-        short_name: 'SheetCore',
+        name: 'PolySheet | Il tuo tavolo, ovunque',
+        short_name: 'PolySheet',
         description: 'Schede di gioco locali, senza account.',
         lang: 'it', start_url: './', scope: './',
         display: 'standalone', background_color: '#f6f5f0', theme_color: '#253e36',
