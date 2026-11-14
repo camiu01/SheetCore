@@ -140,7 +140,7 @@ snapshot retries the view; no source values are fabricated to make it render.
 | Computed collections/text | 10,000 elements / 1 MiB text |
 | Local photo | 1 MiB PNG/JPEG; dimensions 1–4,096 per axis; remote URLs never requested |
 | URL import | HTTPS, no credentials, omitted cookies/referrer; 15 s timeout; streamed size bound |
-| GitHub discovery | 8 MiB per response; 10,000 tree entries, 100 candidates; complete tree required; no clone |
+| GitHub discovery | 8 MiB per response; 20,000 tree entries, 100 candidates; complete tree required; no clone |
 | Input text | Generally 10,000 characters; source `max_length` can tighten supported text inputs |
 
 These are application safety limits, not claims about upstream format limits.

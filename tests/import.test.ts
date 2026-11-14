@@ -18,6 +18,15 @@ describe('monolithic JSON import', () => {
     expect(() => parseSystem('{"id":"x"}')).toThrow('$.character_stats');
     expect(() => parseSystem('{bad')).toThrow('malformato');
   });
+  it('names an unassembled split authoring root instead of raw schema noise', () => {
+    const authoringRoot = {
+      id: '5e', name: '5e', abbreviation: '5e', version: '0.9.1', min_app_version: '1.2.0',
+      character_indexed_stats: ['name'], live_session_enabled: true,
+      progression_systems: {}, currencies: {}
+    };
+    expect(() => parseSystem(JSON.stringify(authoringRoot))).toThrow('sorgente di authoring suddivisa');
+    expect(() => parseSystem(JSON.stringify({ ...authoringRoot, character_stats: demo.character_stats }))).toThrow('$.character_sheet_sections');
+  });
   it('rejects oversized, deep and prototype-bearing documents', () => {
     expect(() => boundedJson('"123456"', 4)).toThrow('grande');
     expect(() => boundedJson('{"__proto__":{"polluted":true}}')).toThrow('vietata');

@@ -68,6 +68,52 @@ describe('documented formula semantics', () => {
     expect(globalThis).not.toHaveProperty('compromised');
   });
 });
+describe('documented enumeration and text formulas', () => {
+  const enumerations = [
+    { id: 'ability', types: [
+      { id: 'strength', name: 'Strength', abbreviation: 'STR' },
+      { id: 'dexterity', name: 'Dexterity', abbreviation: 'DEX' },
+      { id: 'unlabeled', name: 'Unlabeled' }
+    ] },
+    { id: 'base', extends_type: 'ability', types: [{ id: 'wisdom', name: 'Wisdom', abbreviation: 'WIS' }] }
+  ];
+  const env = { enumerations };
+  const enumerated = (type: 'enumeratedName' | 'enumeratedAbbreviation', id: string) => ({ type, enumerated_type: 'ability', id: constant(id, 'string') });
+  it('resolves names and abbreviations, including inherited entries', () => {
+    expect(createEvaluator([], {}, undefined, env).evaluate(enumerated('enumeratedName', 'dexterity'))).toBe('Dexterity');
+    expect(createEvaluator([], {}, undefined, env).evaluate(enumerated('enumeratedAbbreviation', 'strength'))).toBe('STR');
+    expect(createEvaluator([], {}, undefined, env).evaluate({ type: 'enumeratedName', enumerated_type: 'base', id: constant('wisdom', 'string') })).toBe('Wisdom');
+  });
+  it('fails explicitly for absent types, entries, abbreviations and enumerations', () => {
+    expect(() => createEvaluator([], {}, undefined, env).evaluate(enumerated('enumeratedName', 'charisma'))).toThrow('Voce di enumerazione mancante');
+    expect(() => createEvaluator([], {}, undefined, env).evaluate({ type: 'enumeratedName', enumerated_type: 'missing', id: constant('strength', 'string') })).toThrow('Enumerazione mancante');
+    expect(() => createEvaluator([], {}, undefined, env).evaluate(enumerated('enumeratedAbbreviation', 'unlabeled'))).toThrow('Abbreviazione');
+    expect(() => createEvaluator([]).evaluate(enumerated('enumeratedName', 'dexterity'))).toThrow('Enumerazioni del sistema non disponibili');
+    expect(() => createEvaluator([], {}, undefined, env).evaluate({ type: 'enumeratedName', enumerated_type: 'ability', id: constant(3) })).toThrow('non testuale');
+  });
+  it('converts only valid decimal text to a finite number', () => {
+    const e = createEvaluator([]);
+    expect(e.evaluate({ type: 'toNum', components: constant('12', 'string') })).toBe(12);
+    expect(e.evaluate({ type: 'toNum', components: constant('-3.5', 'string') })).toBe(-3.5);
+    for (const value of ['', ' 5', 'abc', '1e3', '12px', 'NaN'])
+      expect(() => e.evaluate({ type: 'toNum', components: constant(value, 'string') })).toThrow('numero testuale valido');
+    expect(() => e.evaluate({ type: 'toNum', components: constant(5) })).toThrow('numero testuale valido');
+  });
+  it('prefixes non-negative numbers and keeps negative ones intact', () => {
+    const e = createEvaluator([]);
+    expect(e.evaluate({ type: 'toSignedString', components: constant(0) })).toBe('+0');
+    expect(e.evaluate({ type: 'toSignedString', components: constant(3) })).toBe('+3');
+    expect(e.evaluate({ type: 'toSignedString', components: constant(-2) })).toBe('-2');
+    expect(() => e.evaluate({ type: 'toSignedString', components: constant('2', 'string') })).toThrow('numero finito');
+  });
+  it('replaces every literal occurrence without regex semantics', () => {
+    const e = createEvaluator([]);
+    expect(e.evaluate({ type: 'replace', string: constant('1d6', 'string'), occurrence: constant('d', 'string'), replace: constant('', 'string') })).toBe('16');
+    expect(e.evaluate({ type: 'replace', string: constant('a.b.c', 'string'), occurrence: constant('.', 'string'), replace: constant('$&', 'string') })).toBe('a$&b$&c');
+    expect(() => e.evaluate({ type: 'replace', string: constant('abc', 'string'), occurrence: constant('', 'string'), replace: constant('x', 'string') })).toThrow('non vuota');
+    expect(() => e.evaluate({ type: 'replace', string: constant(1), occurrence: constant('a', 'string'), replace: constant('b', 'string') })).toThrow('tre testi');
+  });
+});
 describe('bounded dice', () => {
   it('calculates explicit faces and a modifier', () => {
     expect(rollDice('2d6 + 3', [6], () => 4)).toEqual({ results: [4, 4], total: 11 });

@@ -37,7 +37,7 @@ export function ResourceEditor({ system, definition, editing, resources, onSelec
       const next = { ...values, ...Object.fromEntries(Object.entries(changes).map(([id, value]) => [id, jsonValue(value)])) };
       await db.transaction('rw', db.resources, db.systems, async () => {
         for (const record of additions) await saveResource(record);
-        const display = definition.display_name ? createEvaluator(definition.stats, next, undefined, { resources: [...resources, ...additions], resourceDefinitions: system.definition.resources }).get(definition.display_name) : definition.name;
+        const display = definition.display_name ? createEvaluator(definition.stats, next, undefined, { resources: [...resources, ...additions], resourceDefinitions: system.definition.resources, enumerations: system.definition.enumerated_types }).get(definition.display_name) : definition.name;
         if (typeof display !== 'string') throw new Error(it.invalidValue);
         await saveResource({ id: crypto.randomUUID(), systemKey: system.key, definitionId: definition.id, name: display.slice(0, 100) || definition.name, values: next, createdAt: new Date().toISOString() });
       });

@@ -12,6 +12,13 @@ export interface GithubSnapshot {
 }
 const shaPattern = /^[a-f0-9]{40}$/i;
 const systemName = /^(system\.rpg|system\.rpg\.json|system\.json)$/i;
+/**
+ * Upper bound on recursive tree entries, sized so a complete tree still fits
+ * the 8 MiB streamed response ceiling (~20,000 GitHub entries of metadata).
+ * @remarks GitHub truncates larger trees itself; that case is rejected rather
+ * than scanned partially, so this is a payload bound, not a completeness test.
+ */
+export const MAX_TREE_ENTRIES = 20000;
 
 /** Normalize public GitHub root HTTPS/clone links; other hosts are never Git clients. */
 export function githubRepository(input: string): string | null {
@@ -60,7 +67,7 @@ export async function discoverGithub(input: string, ref = ''): Promise<GithubSna
     throw new Error(it.repositoryInvalid);
   const tree = object(await apiJson(new URL(`${api}/git/trees/${treeSha}?recursive=1`)));
   if (tree.truncated === true) throw new Error(it.repositoryTruncated);
-  if (tree.truncated !== false || tree.sha !== treeSha || !Array.isArray(tree.tree) || tree.tree.length > 10000)
+  if (tree.truncated !== false || tree.sha !== treeSha || !Array.isArray(tree.tree) || tree.tree.length > MAX_TREE_ENTRIES)
     throw new Error(it.repositoryInvalid);
   const files: GithubSnapshot['files'] = [];
   const paths = new Set<string>();

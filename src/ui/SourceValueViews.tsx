@@ -145,7 +145,8 @@ function resourceLabel(record: { name: string; values: Record<string, unknown>; 
 	const id = typeof display === 'string' ? display : definition.display_name;
 	if (!id) return record.name;
 	const value = createEvaluator(definition.stats, record.values, undefined, {
-		resources: ctx.resources, resourceDefinitions: ctx.resourceDefinitions, createdAt: record.createdAt
+		resources: ctx.resources, resourceDefinitions: ctx.resourceDefinitions, createdAt: record.createdAt,
+		enumerations: ctx.enumerations
 	}).get(id);
 	return textValue(value) || record.name;
 }
@@ -166,7 +167,8 @@ function selectOptions(v: View, ctx: RenderContext, evaluate: (value: unknown) =
 			if (allowed && !allowed.includes(record.id)) return [];
 			const saved = typeof v.resource_saved_stat === 'string'
 				? textValue(createEvaluator(definition.stats, record.values, undefined, {
-					resources: ctx.resources, resourceDefinitions: definitions, createdAt: record.createdAt
+					resources: ctx.resources, resourceDefinitions: definitions, createdAt: record.createdAt,
+					enumerations: ctx.enumerations
 				}).get(v.resource_saved_stat))
 				: record.id;
 			return [{ id: record.id, label: resourceLabel(record, definition, v.options_display_stat, ctx), value: saved }];

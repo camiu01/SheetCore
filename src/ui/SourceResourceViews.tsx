@@ -178,7 +178,8 @@ export function SourceResourceArray({ node: v, context: ctx }: { node: View; con
 /** Evaluate one per-instance formula with that resource as the visible scope. */
 function evaluateItem(ctx: RenderContext, definition: ResourceDefinition, record: ResourceInstance, value: unknown) {
 	return createEvaluator(definition.stats, record.values, undefined, {
-		resources: ctx.resources, resourceDefinitions: ctx.resourceDefinitions, createdAt: record.createdAt
+		resources: ctx.resources, resourceDefinitions: ctx.resourceDefinitions, createdAt: record.createdAt,
+		enumerations: ctx.enumerations
 	}).evaluate(value);
 }
 

@@ -54,7 +54,7 @@ metadata. Remote URL import is user initiated and subject to browser CORS.
   Public GitHub discovery adds two metadata reads and an explicit selected-file
   download at a pinned commit. No clone, proxy or remote document merge.
   API payloads use the bounded JSON parser. Complete trees are required, with
-  10,000 entries/100 candidates; symlinks/submodules are excluded. Paths are
+  20,000 entries/100 candidates; symlinks/submodules are excluded. Paths are
   validated and encoded, and remote response URLs do not choose download hosts.
 - Local fixture scripts: argument-array Git subprocesses at pinned commits;
   no external compiler/tool code execution or automatic publication.

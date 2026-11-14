@@ -83,7 +83,7 @@ function resourceText(v: View, ctx: RenderContext) {
     const r = ctx.resources?.find(r => r.id === id && r.definitionId === d.id && (!ctx.systemKey || r.systemKey === ctx.systemKey));
     if (!r) throw new Error(it.missingResource);
     const display = typeof v.resource_display_stat === 'string' ? v.resource_display_stat : d.display_name;
-    return display ? textValue(createEvaluator(d.stats, r.values, undefined, { resources: ctx.resources, resourceDefinitions: ctx.resourceDefinitions, createdAt: r.createdAt }).get(display)) : r.name;
+    return display ? textValue(createEvaluator(d.stats, r.values, undefined, { resources: ctx.resources, resourceDefinitions: ctx.resourceDefinitions, createdAt: r.createdAt, enumerations: ctx.enumerations }).get(display)) : r.name;
   }).join(', ');
 }
 const sourceIconEntries = Object.entries(sourceIcons);

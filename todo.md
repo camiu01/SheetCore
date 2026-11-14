@@ -1,15 +1,15 @@
 # System compatibility TODO
 
 Scope: full runtime support for the inspected `5e` version `0.6.0` system,
-not universal RPG-system compatibility. Updated 2026-11-13.
+not universal RPG-system compatibility. Updated 2026-11-14.
 
 The supplied `system.rpg` matches the pinned derpsy distribution: 101867
 compressed bytes, 317 character stats and 50 resource definitions. SHA-256:
 `629daf13b73eb11fc898077418ee2440ccdc75c12e59720c074780cb99e1ed9c`.
-The current diagnostic snapshot contains 1,683 warnings, many repeated or about
+The current diagnostic snapshot contains 1,601 warnings, many repeated or about
 null optional fields. This is not a count of distinct missing features.
-Measured on 2026-11-13 after the source-view increment: 0 errors, 1,683
-warnings — 1,421 uninterpreted fields, 0 unsupported view instances, 85
+Measured on 2026-11-14 after the enumeration/string formula increment: 0 errors,
+1,601 warnings — 1,421 uninterpreted fields, 0 unsupported view instances, 3
 unsupported formula nodes of 11,792, 129 unresolved formula references, 21
 mechanics, 9 resources with mechanics, 4 creation pages, 46 enumerated types.
 The increment reduced the total from 1,875 by implementing `resourceArray`,
@@ -43,10 +43,13 @@ complete external content-archive support. See [GitHub import](docs/GITHUB_IMPOR
 
 ## 2. Remaining formulas and resource operations
 
-- [ ] Verify and implement `notNull`, `enumeratedName`,
-  `enumeratedAbbreviation` and `eventName`.
-- [ ] Verify and implement `toNum`, `toSignedString`, `replace`, `split`
-  and `append`, including invalid inputs and bounds.
+- [x] Implement `notNull`, `enumeratedName`, `enumeratedAbbreviation`,
+  `toNum`, `toSignedString` and `replace`. Enumeration labels resolve inherited
+  entries and fail for unknown ids; `toNum` rejects non-decimal text and
+  `replace` is literal, all-occurrence and bounded.
+- [ ] Verify and implement `eventName`, which needs a real event scope.
+- [ ] Verify and implement `split`; the public page documents a plain separator
+  while the pinned source passes a regular expression, so semantics are unverified.
 - [ ] Verify and implement `copyResource`, including identity, references and
   clone ownership; do not assume shallow or deep copying semantics.
 - [ ] Implement `createChip` and dynamic `listItem.chips` evaluation/rendering.

@@ -2,6 +2,68 @@
 
 This is a development verification record, not a compatibility certification.
 
+## Enumeration/string formulas and split-authoring diagnostics
+
+Executed on 2026-11-14 on Linux against the delivered application code.
+
+- Reproduced the reported `https://github.com/blastervla/rpg-companion-app-systems`
+  selection failure. Its `systems/5e/system/system.rpg.json` (41,628 bytes,
+  version 0.9.1) is an unassembled authoring root: `character_stats`,
+  `character_sheet_sections`, `character_creation_flow`,
+  `character_search_item_view`, `mechanics`, `resources` and `enumerated_types`
+  live in sibling files/folders. The importer now names that condition and tells
+  the user to use a compiled monolithic system; it never merges `.rpgs` sources.
+  A partially populated document still receives field-level schema errors.
+- Implemented the documented `enumeratedName`, `enumeratedAbbreviation`,
+  `toNum`, `toSignedString` and `replace` formulas. Enumeration labels resolve
+  `enumerated_types` including inherited entries, with one bounded cache per
+  evaluator; unknown types/entries and missing abbreviations fail explicitly.
+  `toNum` accepts only plain decimal text (≤64 characters); `replace` is literal,
+  all-occurrence and bounded to 1 MiB; `toSignedString` prefixes non-negative
+  numbers. `split` was left unimplemented because its documented plain separator
+  conflicts with the pinned regular-expression usage, and `eventName` still needs
+  an event scope.
+- Supplied 0.6.0 fixture after the increment: **0 errors, 1,601 warnings**
+  (previously 1,683), with 3 unsupported `eventName` formulas and 129 unresolved
+  formula references. No warning was suppressed to obtain this count.
+- `npm run check`: strict TypeScript passed, **146 passed, 11 skipped** across
+  13 files. Skips are absent historical external fixtures. New independent
+  regressions cover inherited enumeration entries, absent types/entries/
+  abbreviations/environments, decimal acceptance and rejection, signed output,
+  literal `$&` replacement, the reported 10,577-entry tree and the authoring root.
+- `npm run build`: passed; main JS 627.36 kB (189.02 kB gzip), CSS 37.59 kB,
+  11 precache entries (684.50 KiB). Existing Zod annotation and >500 kB chunk
+  warnings remain. `npm audit --omit=dev`: zero known runtime vulnerabilities.
+- Production Playwright on port 4183, `/PolySheet/`: **30 passed, 10 skipped**,
+  matching the current baseline, including the supplied-system import case.
+
+## Reported GitHub tree-size limit follow-up
+
+Executed on 2026-11-14 on Linux against the delivered application code.
+
+- Reproduced the report with `https://github.com/blastervla/rpg-companion-app-systems`:
+  its recursive tree is complete (`truncated: false`, matching root tree SHA)
+  but holds 10,577 entries, so the former 10,000-entry ceiling rejected the
+  repository before listing its three `system.rpg.json` candidates.
+- The discovery bound is now an exported `MAX_TREE_ENTRIES` of 20,000, sized to
+  the existing 8 MiB streamed-response ceiling. Truncated or larger trees still
+  fail explicitly; candidate, path, size and commit checks are unchanged.
+- A read-only check of the public API confirmed 10,577 entries, 10,330 regular
+  blobs, no unsafe paths or invalid sizes, and exactly three candidates
+  (`systems/5e`, `systems/5e2024`, `systems/pf2e`), each about 41 kB. No clone,
+  archive download or installation was performed.
+- `npm run check`: strict TypeScript passed, **140 passed, 11 skipped** across
+  13 files. The new regression reproduces the reported 10,577-entry tree and
+  expects the three sorted nested candidates; the declared tree and candidate
+  boundaries are exercised at 20,000 entries and 100 candidates.
+- `npm run build`: passed; existing Zod annotation and >500 kB chunk warnings
+  remain. `npm audit --omit=dev`: zero known runtime vulnerabilities.
+- Production Playwright on port 4183 with `PLAYWRIGHT_BASE_PATH=/PolySheet/`:
+  **30 passed, 10 skipped**, matching the current baseline; skips are absent
+  historical external fixtures and the optional live provider case. The limit
+  itself is covered by contract fixtures and the existing controlled GitHub
+  browser flows, which were rerun unchanged.
+
 ## Pre-push root-hosting check
 
 Executed on 2026-11-14 on Linux without application-code changes.

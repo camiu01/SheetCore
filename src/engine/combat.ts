@@ -14,7 +14,7 @@ export function combatContext(system: StoredSystem, combat: Combat, characters: 
   const definition = system.definition.combat_system;
   if (!definition || combat.systemKey !== system.key) throw new Error('Sistema di combattimento mancante o non corrispondente.');
   const definitions = system.definition.resources;
-  const environment: EvaluationEnvironment = { resources, resourceDefinitions: definitions, createdAt: combat.createdAt, roll };
+  const environment: EvaluationEnvironment = { resources, resourceDefinitions: definitions, createdAt: combat.createdAt, roll, enumerations: system.definition.enumerated_types };
   const globals: Record<string, unknown> = { $combat_difficulty: combat.difficulty };
   environment.variables = globals;
   const scopes = new Map<string, RuntimeResource>();

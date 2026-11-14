@@ -2,7 +2,7 @@
 /** @file Public GitHub contract fixtures; no credentials, clones or remote writes. */
 import { gzipSync } from 'node:zlib';
 import { afterEach, expect, it, vi } from 'vitest';
-import { discoverGithub, githubRepository, importGithubFile } from '../src/importing/github';
+import { discoverGithub, githubRepository, importGithubFile, MAX_TREE_ENTRIES } from '../src/importing/github';
 import { artifactBytes } from '../src/importing/package';
 import { importFromUrl } from '../src/importing/url';
 import { MAX_SYSTEM_BYTES } from '../src/importing/system';
@@ -67,7 +67,7 @@ it('rejects incomplete, unsafe, oversized or inconsistent trees instead of showi
     tree([entry('a\\system.rpg')]), tree([{ ...entry(), size: -1 }]),
     tree([{ ...entry(), size: MAX_SYSTEM_BYTES + 1 }]), tree([{ ...entry(), size: 1.5 }]),
     tree(Array.from({ length: 101 }, (_, i) => entry(`${i}/system.json`))),
-    tree(Array.from({ length: 10001 }, () => ({ type: 'tree' })))
+    tree(Array.from({ length: MAX_TREE_ENTRIES + 1 }, () => ({ type: 'tree' })))
   ]) { stubTree(value); await expect(discoverGithub(repository)).rejects.toThrow(); }
 });
 
@@ -76,9 +76,22 @@ it('accepts the declared file-size boundary without downloading it during discov
   expect((await discoverGithub(repository)).files[0].size).toBe(MAX_SYSTEM_BYTES);
   expect(fetch).toHaveBeenCalledTimes(2);
   const entries: unknown[] = Array.from({ length: 100 }, (_, i) => entry(`${i}/system.rpg`));
-  entries.push(...Array.from({ length: 9900 }, () => ({ type: 'tree' })));
+  entries.push(...Array.from({ length: MAX_TREE_ENTRIES - 100 }, () => ({ type: 'tree' })));
   stubTree(tree(entries));
   expect((await discoverGithub(repository)).files).toHaveLength(100);
+});
+
+it('discovers nested system files in a large repository tree beyond ten thousand entries', async () => {
+  const nested = (path: string) => entry(path);
+  const entries: unknown[] = [nested('systems/5e/system/system.rpg.json'),
+    nested('systems/pf2e/system/system.rpg.json'), nested('systems/5e2024/system/system.rpg.json')];
+  entries.push(...Array.from({ length: 10574 }, () => ({ type: 'tree' })));
+  stubTree(tree(entries));
+  const snapshot = await discoverGithub('https://github.com/blastervla/rpg-companion-app-systems');
+  expect(snapshot.files.map(file => file.path)).toEqual([
+    'systems/5e/system/system.rpg.json', 'systems/5e2024/system/system.rpg.json',
+    'systems/pf2e/system/system.rpg.json'
+  ]);
 });
 
 it('reports authoring-only repositories and does not compile split sources', async () => {
@@ -89,6 +102,13 @@ it('reports authoring-only repositories and does not compile split sources', asy
   const split = JSON.stringify({ id: 'split-root-only' });
   vi.stubGlobal('fetch', vi.fn(async () => new Response(split)));
   await expect(importGithubFile({ ...snapshot, files: [{ path: 'system.rpg.json', size: new TextEncoder().encode(split).length }] }, 'system.rpg.json')).rejects.toThrow('Invalid input');
+  const authoring = JSON.stringify({
+    id: '5e', name: '5e', version: '0.9.1', min_app_version: '1.2.0', character_indexed_stats: ['name'],
+    live_session_enabled: true, progression_systems: {}, currencies: {}
+  });
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(authoring)));
+  await expect(importGithubFile({ ...snapshot, files: [{ path: 'system.rpg.json', size: new TextEncoder().encode(authoring).length }] }, 'system.rpg.json'))
+    .rejects.toThrow('sorgente di authoring suddivisa');
 });
 
 it('rejects an empty or malformed commit response and invalid refs before tree traversal', async () => {

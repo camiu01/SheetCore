@@ -54,11 +54,14 @@ version pins use existing immutable-source behavior.
   archive download, automatic retry, background sync or imported code execution.
 - Each response is streamed with an 8 MiB ceiling and a 15-second timeout.
   Existing JSON node/depth and independent gzip expansion limits also apply.
-- At most 10,000 tree entries and 100 candidates. Truncated/oversized trees,
+- At most 20,000 tree entries and 100 candidates. Truncated/oversized trees,
   invalid paths, duplicate candidate paths and inconsistent metadata fail
   explicitly instead of presenting a partial scan as complete.
 - A candidate larger than 8 MiB blocks discovery with a visible error. Use a
   direct URL to an eligible file when another candidate exceeds the limit.
+- An unassembled split authoring root (system identity without the required
+  collection roots) is rejected with a specific message; sibling `.rpgs` files
+  are never merged into it.
 - The selected download must match its declared size. Git LFS substitution
   is not supported by this reader.
 - Requests omit cookies/referrers and use no token. Public API rate limits,

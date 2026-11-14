@@ -9,6 +9,7 @@ import {
   matchesType, object, systemSchema, type Diagnostic, type Stat,
   type StoredSystem, type SystemDefinition
 } from '../domain/model';
+import { it } from '../ui/it';
 
 export const MAX_SYSTEM_BYTES = 8 * 1024 * 1024;
 /** Renderer field allowlist; unhandled fields remain in the original document. */
@@ -87,9 +88,32 @@ export function boundedJson(text: string, maxBytes = MAX_SYSTEM_BYTES): unknown 
   visit(parsed, 0);
   return parsed;
 }
+/**
+ * Collection roots that only an assembled monolithic system contains.
+ * @remarks The upstream authoring format keeps them in sibling files/folders.
+ */
+const monolithicSections = [
+  'character_stats', 'character_sheet_sections', 'character_creation_flow',
+  'character_search_item_view', 'mechanics', 'resources', 'enumerated_types'
+] as const;
+
+/**
+ * Recognize an unassembled split authoring root before schema noise is shown.
+ * @param parsed - Already bounded and parsed JSON document.
+ * @returns True only for a system identity that carries none of the collection
+ * roots; partially malformed systems still receive field-level validation.
+ */
+function splitAuthoringRoot(parsed: unknown): boolean {
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return false;
+  const root = object(parsed);
+  if (typeof root.id !== 'string' || typeof root.version !== 'string') return false;
+  return monolithicSections.every(key => root[key] == null);
+}
+
 /** Validate the monolithic structure and report semantic/compatibility issues. */
 export function parseSystem(original: string): { definition: SystemDefinition; diagnostics: Diagnostic[] } {
   const parsed = boundedJson(original);
+  if (splitAuthoringRoot(parsed)) throw new Error(it.authoringRoot);
   const result = systemSchema.safeParse(parsed);
   if (!result.success) throw new Error(result.error.issues.slice(0, 12).map(i => `$.${i.path.join('.')}: ${i.message}`).join('\n'));
   const definition = result.data;
@@ -142,6 +166,9 @@ export function diagnose(system: SystemDefinition): Diagnostic[] {
         report(`${path}.rounding_method`, 'Supportati solo down, up, none espliciti; closest non verificato.');
       if (type === 'sortBy' && !['asc', 'desc'].includes(String(node.order)))
         report(`${path}.order`, 'Ordine sortBy richiesto: asc o desc.', 'error');
+      if ((type === 'enumeratedName' || type === 'enumeratedAbbreviation') &&
+          (typeof node.enumerated_type !== 'string' || !node.enumerated_type))
+        report(`${path}.enumerated_type`, 'Tipo di enumerazione richiesto', 'error');
     }
     if (type === 'list' || type === 'flatAppend') {
       if (!Array.isArray(node.components)) report(`${path}.components`, 'Lista richiesta', 'error');
@@ -156,10 +183,10 @@ export function diagnose(system: SystemDefinition): Diagnostic[] {
       });
     } else if (Object.hasOwn(node, 'components') && !Array.isArray(node.components)) {
       checkFormula(node.components, `${path}.components`, stats, bindings, allowRoll);
-    } else if (['add', 'subtract', 'multiply', 'divide', 'and', 'or', 'isEmpty', 'isNull', 'notNull', 'toLowerCase', 'sortBy', 'findFirst', 'flatMap', 'concat', 'trim', 'date', 'max', 'min', 'map', 'filter', 'defaultIfNull', 'joinToString', 'equals', 'notEquals', 'length', 'not', 'greaterThan', 'greaterThanEquals', 'lessThan', 'lessThanEquals'].includes(type)) {
+    } else if (['add', 'subtract', 'multiply', 'divide', 'and', 'or', 'isEmpty', 'isNull', 'notNull', 'toLowerCase', 'sortBy', 'findFirst', 'flatMap', 'concat', 'trim', 'date', 'max', 'min', 'map', 'filter', 'defaultIfNull', 'joinToString', 'equals', 'notEquals', 'length', 'not', 'greaterThan', 'greaterThanEquals', 'lessThan', 'lessThanEquals', 'toNum', 'toSignedString'].includes(type)) {
       report(`${path}.components`, 'Formula components richiesta (non una lista JSON diretta)', 'error');
     }
-    for (const field of ['mapper', 'filter', 'sort_by_selector', 'haystack', 'needle', 'default_components', 'meta_stat', 'formula']) {
+    for (const field of ['mapper', 'filter', 'sort_by_selector', 'haystack', 'needle', 'default_components', 'meta_stat', 'formula', 'string', 'occurrence', 'replace', 'id']) {
       if (!formulaFields[type]?.includes(field)) continue;
       if (type === 'findFirst' && field === 'filter' && node.filter == null) continue;
       let inner = bindings;
@@ -279,7 +306,7 @@ export function diagnose(system: SystemDefinition): Diagnostic[] {
   }
   if (system.mechanics.length) report('$.mechanics', `${system.mechanics.length} meccaniche non eseguite: il sistema non è pienamente utilizzabile.`);
   if (Object.keys(system.progression_systems).length) report('$.progression_systems', 'Progressione automatica non supportata.');
-  if (system.enumerated_types.length) report('$.enumerated_types', 'Enumerazioni conservative: select e menuButton le usano; le formule enumerated del motore restano non supportate.');
+  if (system.enumerated_types.length) report('$.enumerated_types', 'Enumerazioni usate da select, menuButton e dalle formule enumerated; le chip dinamiche non sono ancora interpretate.');
   if (!system.dice) report('$.dice', 'Definizioni dadi assenti nella variante storica. Disponibile solo il lanciatore manuale dell’app.');
   system.resources.forEach((r, i) => {
     const p = `$.resources[${i}]`;

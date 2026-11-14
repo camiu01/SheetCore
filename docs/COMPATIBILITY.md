@@ -376,6 +376,9 @@ exact path is specified.
 | [divide](https://docs.rpg-companion.app/Stat/Formulas/divide) | `character_stats[160].components` | Partial: ordered division; explicit down/up/none; reject zero, missing rounding, closest | engine, documented `[20,2,5] = 2`, external `8 → -1`, `15 → 2`, `9 → -1` |
 | [when](https://docs.rpg-companion.app/Stat/Formulas/when), [isEmpty](https://docs.rpg-companion.app/Stat/Formulas/isEmpty) | `resources[39].stats[2].components` | Supported subset: first matching bool condition only; isEmpty accepts text/list | engine + external note default/title tests |
 | [and](https://docs.rpg-companion.app/Stat/Formulas/and) | `resources[39].edit_view.subviews[0].validation_message.clauses[0].condition` | Boolean-list formula without short circuit; real scoped form validation | engine + view-session + browser |
+| [enumeratedName](https://docs.rpg-companion.app/Stat/Formulas/enumeratedName), [enumeratedAbbreviation](https://docs.rpg-companion.app/Stat/Formulas/enumeratedAbbreviation) | Supplied 0.6.0: `mechanics[17].effects.pop_up_view.subviews[1].subviews[1].text` (alignment name), `resources[5].stats[8].components.components.components[2]` (ability abbreviation) | Partial: resolves through the source `enumerated_types`, including inherited entries, with a lazy per-type cache; unknown type/entry or a missing abbreviation fails explicitly; no label fallback | engine + import + supplied-source diagnostics |
+| [toNum](https://docs.rpg-companion.app/Stat/Formulas/toNum), [toSignedString](https://docs.rpg-companion.app/Stat/Formulas/toSignedString) | Supplied 0.6.0: `resources[5].stats[13].components` (hit die), `resources[27].stats[58].components.components.components[3]` (modifier) | `toNum` accepts only plain decimal text up to 64 characters and rejects whitespace, exponents, empty text or non-finite results; `toSignedString` prefixes non-negative numbers with `+` and keeps negatives unchanged | engine |
+| [replace](https://docs.rpg-companion.app/Stat/Formulas/replace) | Supplied 0.6.0: `resources[5].stats[13].components.components` (`d` removed from a hit die) | Literal all-occurrence replacement with no regex or replacement-pattern syntax; empty occurrence rejected; 1 MiB result bound | engine |
 | [CharacterSheetSection](https://docs.rpg-companion.app/System/CharacterSheetSection), [section](https://docs.rpg-companion.app/Views/section) | `character_sheet_sections[5]` | Partial: source order, header/content, collapsibility and responsive minimum width; no lifecycle actions | renderer + external + E2E |
 | [stat view](https://docs.rpg-companion.app/Views/stat) | `character_sheet_sections[5].view.content[0..5]` | Partial: displayed stat and distinct edit_stat, names, signs, scalar editing; events not executed and visibly flagged | renderer + external + offline external E2E |
 | [text](https://docs.rpg-companion.app/Views/text) | `character_sheet_sections[5].view.header[1]`, `resources[39].display_view.subviews[0]` | Plain text/scalar editing, scoped validation, signs/clamp/colors and pinned local resource-ID display; no HTML/Markdown | renderer + view-session + browser |
@@ -386,7 +389,7 @@ exact path is specified.
 | [CharacterCreationPage](https://docs.rpg-companion.app/System/CharacterCreationPage) | `character_creation_flow[0..3]`; current `systems/5e/system/character_creation_flow/01_item_1.rpgs` | Not supported; explicit separate manual creator | import diagnostics + browser manual-creation assertion |
 | [Mechanic](https://docs.rpg-companion.app/Mechanic/), [Effect](https://docs.rpg-companion.app/Effects/Effect) | `mechanics[]`; stat-view `on_tap_event` | General dispatch/stacking/reversal unsupported. Only explicit combat instance `on_create` synchronous sequence and one `setStat/set` per direct target execute atomically | import + renderer + combat tests |
 | [RPGDice](https://docs.rpg-companion.app/System/RPGDice), [Rollable](https://docs.rpg-companion.app/System/Rollable) | Historical root has no `dice`; supplied Archer `5e/system.rpg` decoded JSON `dice[0..5]` defines d4/d6/d8/d10/d12/d20 | Partial: imported face definitions, `xdy +/- n` manual roller and history; no Rollable object/effect dispatch or 3D | engine dice tests, Archer integration + E2E; historical absence warning |
-| [Split composition](https://docs.rpg-companion.app/GettingStarted/SystemCreation) | Current `systems/5e/system/` | Not supported; no folder/archive import or guessed merge | file format rejection |
+| [Split composition](https://docs.rpg-companion.app/GettingStarted/SystemCreation) | Current `systems/5e/system/` | Not supported; no folder/archive import or guessed merge. An unassembled authoring root is rejected with an explicit message, and its fields are never taken from sibling files | file format rejection + import + GitHub regressions |
 | [RPGScript/dev tool](https://docs.rpg-companion.app/GettingStarted/DeveloperTools/RPGScript) | Current `systems/5e/system/character_stats.rpgs` and `_stdlib/*.rpgs` | Not supported in browser; no partial compiler, external tool code not reused | documented input restriction |
 | Distribution and `.rpg` | Supplied Archer and derpsy `5e/system.rpg` pinned blobs | Partial: native gzip-JSON **system** decoding only; exact original-file hash/export; 8 MiB raw/expanded limits. No repository crawling, resource-pack import, guessed framing or generic binary support | package regressions, both real files, offline/backup E2E and separate live Raw URL check |
 | Internal local storage and backup | No upstream example: deliberately PolySheet-specific | IndexedDB schema v3, backup v3 with gzip originals/encounters, legacy v1/v2 restore, atomic validated replacement, offline shell/content | persistence/migration/package/capabilities + desktop/mobile E2E |
@@ -456,6 +459,31 @@ deferred React children such as `ticker`, stay visible inside a local boundary
 instead of taking down the app shell. Manual resource editing is explicitly
 available when the original form fails; source form validation is not bypassed
 silently or advertised as supported.
+
+### Enumeration and string formula increment
+
+The same supplied 0.6.0 fixture uses `enumeratedName` (39 nodes),
+`toSignedString` (17), `replace` (3), `enumeratedAbbreviation` (2) and `toNum`
+(2). Their public pages define: label lookup through `enumerated_types` that
+fails for an unknown type or entry; signed decimal formatting; literal
+all-occurrence replacement; and strict string-to-number conversion that fails
+for non-numeric text. The interpreter now implements those rules, resolves
+inherited enumeration entries through the existing bounded helper and caches
+one resolved type per evaluator. Missing abbreviations, missing enumerations and
+invalid `toNum` operands fail visibly instead of returning an empty label.
+
+Independent regressions cover inherited entries, absent types/entries/
+abbreviations, absent environments, plain-decimal acceptance and rejection,
+sign formatting and literal replacement (including `$&` remaining literal).
+The supplied-source diagnostics move from 1,683 to 1,601 warnings with 0 errors;
+the remaining unsupported formula nodes are three `eventName` references that
+need an event scope. `split` (4 nodes) is not implemented because the public
+page documents a plain separator while the pinned source uses a regular
+expression; its semantics remain unverified rather than guessed. Creation-flow
+`replace`/`toNum` nodes are still not executed because that flow itself is not
+supported. An unassembled split authoring root such as the current
+`systems/5e/system/system.rpg.json` is now rejected by name instead of exposing
+raw schema paths; it is never merged with its sibling `.rpgs` files.
 
 ### Reported AC, description and avatar menu diagnostics
 

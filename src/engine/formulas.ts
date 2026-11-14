@@ -3,6 +3,7 @@
  * @see https://docs.rpg-companion.app/Stat/Formulas/StatFormulaComponent
  */
 import { formula, isResourceReference, matchesType, object, type Node, type ResourceDefinition, type ResourceInstance, type Stat } from '../domain/model';
+import { enumerationEntries, type EnumerationEntry } from './enumerations';
 
 /** A trusted runtime scope, never serialized as a persisted stat value. */
 export class RuntimeResource {
@@ -19,6 +20,8 @@ export interface EvaluationEnvironment {
   resourceDefinitions?: ResourceDefinition[];
   variables?: Record<string, unknown>;
   overrides?: Record<string, unknown>;
+  /** Raw system `enumerated_types`, resolved lazily for enumerated formulas. */
+  enumerations?: unknown[];
   /** Explicit opt-in for commands such as combat initialization, never rendering. */
   roll?: (expression: string) => number;
 }
@@ -26,6 +29,7 @@ type ScopeApi = {
   scoped: (key: string, value: unknown, component: unknown) => unknown;
   defined: (path: string) => boolean;
   roll: (expression: string) => number;
+  enumeration: (typeId: string, id: string, field: 'name' | 'abbreviation') => string;
 };
 type Handler = (node: Node, evaluate: (value: unknown) => unknown, stat: (id: string, bypass?: boolean) => unknown, scope: ScopeApi) => unknown;
 /** Reject unsafe paths without evaluating code or walking object prototypes. */
@@ -88,8 +92,18 @@ export const formulaFields: Record<string, string[]> = {
   isNull: ['components'], notNull: ['components'], toLowerCase: ['components'],
   contains: ['haystack', 'needle'], flatMap: ['components', 'mapper', 'map_value_key'],
   findFirst: ['components', 'filter', 'find_first_value_key'],
-  sortBy: ['components', 'sort_by_selector', 'sort_by_value_key', 'order']
+  sortBy: ['components', 'sort_by_selector', 'sort_by_value_key', 'order'],
+  enumeratedName: ['enumerated_type', 'id'], enumeratedAbbreviation: ['enumerated_type', 'id'],
+  toNum: ['components'], toSignedString: ['components'],
+  replace: ['string', 'occurrence', 'replace']
 };
+/** Resolve one enumerated entry label through the scoped resolver. */
+function enumeratedValue(scope: ScopeApi, node: Node, evaluate: (value: unknown) => unknown, field: 'name' | 'abbreviation') {
+  if (typeof node.enumerated_type !== 'string' || !node.enumerated_type) throw new Error('enumerated_type richiesto');
+  const id = evaluate(node.id);
+  if (typeof id !== 'string' || !id) throw new Error('id di enumerazione non testuale');
+  return scope.enumeration(node.enumerated_type, id, field);
+}
 /** Extensible handler registry. No dynamic JavaScript evaluation is used. */
 export const formulaHandlers = new Map<string, Handler>([
   ['isNull', (n, e) => e(n.components) === null],
@@ -98,6 +112,28 @@ export const formulaHandlers = new Map<string, Handler>([
     const value = e(n.components);
     if (typeof value !== 'string') throw new Error('toLowerCase richiede testo');
     return value.toLowerCase();
+  }],
+  ['enumeratedName', (n, e, _get, scope) => enumeratedValue(scope, n, e, 'name')],
+  ['enumeratedAbbreviation', (n, e, _get, scope) => enumeratedValue(scope, n, e, 'abbreviation')],
+  ['toNum', (n, e) => {
+    const value = e(n.components);
+    if (typeof value !== 'string' || value.length > 64 || !/^[+-]?(?:\d+(?:\.\d+)?|\.\d+)$/.test(value))
+      throw new Error('toNum richiede un numero testuale valido');
+    return Number(value);
+  }],
+  ['toSignedString', (n, e) => {
+    const value = e(n.components);
+    if (typeof value !== 'number' || !Number.isFinite(value)) throw new Error('toSignedString richiede un numero finito');
+    return value >= 0 ? `+${value}` : String(value);
+  }],
+  ['replace', (n, e) => {
+    const text = e(n.string), occurrence = e(n.occurrence), replacement = e(n.replace);
+    if (typeof text !== 'string' || typeof occurrence !== 'string' || typeof replacement !== 'string')
+      throw new Error('replace richiede tre testi');
+    if (!occurrence) throw new Error('replace richiede una sottostringa non vuota');
+    const result = text.split(occurrence).join(replacement);
+    if (result.length > 1024 * 1024) throw new Error('Testo calcolato troppo grande');
+    return result;
   }],
   ['contains', (n, e) => {
     const values = e(n.haystack), needle = e(n.needle);
@@ -310,9 +346,24 @@ export function createEvaluator(stats: Stat[], values: Record<string, unknown> =
   const resources = new Map(environment.resources?.map(r => [r.id, r]));
   const frames: Record<string, unknown>[] = [];
   const cache = new Map<string, unknown>();
+  const enumerations = new Map<string, Map<string, EnumerationEntry>>();
   const active: string[] = [];
   let steps = 0;
   let depth = 0;
+  /** Resolve and cache one enumerated type; ids must exist as documented. */
+  function enumeration(typeId: string, id: string, field: 'name' | 'abbreviation') {
+    if (!Array.isArray(environment.enumerations)) throw new Error('Enumerazioni del sistema non disponibili');
+    let entries = enumerations.get(typeId);
+    if (!entries) {
+      entries = new Map(enumerationEntries(environment.enumerations, typeId).map(entry => [entry.id, entry]));
+      enumerations.set(typeId, entries);
+    }
+    const entry = entries.get(id);
+    if (!entry) throw new Error(`Voce di enumerazione mancante: ${typeId}.${id}`);
+    const value = field === 'name' ? entry.name : entry.abbreviation;
+    if (typeof value !== 'string') throw new Error(`Abbreviazione di enumerazione mancante: ${typeId}.${id}`);
+    return value;
+  }
   function bounded<T>(fn: () => T): T {
     if (++steps > limits.steps || depth >= limits.depth) throw new Error('Limite di valutazione superato');
     depth++;
@@ -348,7 +399,8 @@ export function createEvaluator(stats: Stat[], values: Record<string, unknown> =
           const total = environment.roll(expression);
           if (!Number.isSafeInteger(total)) throw new Error('Risultato dadi non valido');
           return total;
-        }
+        },
+        enumeration
       });
       if (typeof result === 'number' && !Number.isFinite(result)) throw new Error('Risultato numerico non finito');
       return result;
